@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --background: 150 30% 6%;
+    --foreground: 0 0% 98%;
+
+    --card: 150 25% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 150 25% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 142 71% 45%;
+    --primary-foreground: 150 30% 6%;
+
+    --secondary: 150 20% 15%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 150 15% 20%;
+    --muted-foreground: 150 10% 55%;
+
+    --accent: 142 71% 45%;
+    --accent-foreground: 150 30% 6%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 150 20% 18%;
+    --input: 150 20% 18%;
+    --ring: 142 71% 45%;
+
+    --radius: 1rem;
+
+    /* Custom FitLab colors */
+    --fitlab-green: 142 71% 45%;
+    --fitlab-green-glow: 142 80% 50%;
+    --fitlab-blue: 200 80% 55%;
+    --fitlab-orange: 25 95% 55%;
+    --fitlab-purple: 270 60% 55%;
+    --fitlab-yellow: 45 90% 55%;
+    
+    /* Gradients */
+    --gradient-card: linear-gradient(135deg, hsl(150 25% 12%) 0%, hsl(150 25% 8%) 100%);
+    --gradient-glow: radial-gradient(circle at center, hsl(142 71% 45% / 0.15) 0%, transparent 70%);
+
+    --sidebar-background: 150 25% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 150 30% 6%;
+    --sidebar-accent: 150 20% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 150 20% 18%;
+    --sidebar-ring: 142 71% 45%;
+  }
+
+  .dark {
+    --background: 150 30% 6%;
+    --foreground: 0 0% 98%;
+    --card: 150 25% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 150 25% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142 71% 45%;
+    --primary-foreground: 150 30% 6%;
+    --secondary: 150 20% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 150 15% 20%;
+    --muted-foreground: 150 10% 55%;
+    --accent: 142 71% 45%;
+    --accent-foreground: 150 30% 6%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 150 20% 18%;
+    --input: 150 20% 18%;
+    --ring: 142 71% 45%;
+    --sidebar-background: 150 25% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 150 30% 6%;
+    --sidebar-accent: 150 20% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 150 20% 18%;
+    --sidebar-ring: 142 71% 45%;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 150 30% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 150 30% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 30% 10%;
+    --primary: 142 71% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 15% 92%;
+    --secondary-foreground: 150 30% 10%;
+    --muted: 150 10% 92%;
+    --muted-foreground: 150 10% 45%;
+    --accent: 142 71% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 10% 85%;
+    --input: 150 10% 85%;
+    --ring: 142 71% 40%;
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 150 30% 10%;
+    --sidebar-primary: 142 71% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 15% 92%;
+    --sidebar-accent-foreground: 150 30% 10%;
+    --sidebar-border: 150 10% 85%;
+    --sidebar-ring: 142 71% 40%;
+
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(150 10% 96%) 100%);
+    --gradient-glow: radial-gradient(circle at center, hsl(142 71% 45% / 0.08) 0%, transparent 70%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl;
+  }
+  
+  .glow-green {
+    box-shadow: 0 0 20px hsl(142 71% 45% / 0.3), 0 0 40px hsl(142 71% 45% / 0.1);
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-green-400;
+  }
+}

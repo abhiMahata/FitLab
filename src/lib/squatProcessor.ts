@@ -192,7 +192,7 @@ export class SquatProcessor {
     private frontThresholds: FrontViewThresholds | null = null;
     private cameraView: CameraView = "side";
 
-    // State machine
+    // ── State machine ──
     private stateSeq: string[] = [];
     private startInactiveTime = performance.now();
     private startInactiveTimeFront = performance.now();
@@ -205,8 +205,21 @@ export class SquatProcessor {
     private prevState: string | null = null;
     private currState: string | null = null;
 
+    // ── Debouncing & confirmation ──
+    private rawState: string | null = null;       // unconfirmed state from angle
+    private rawStateFrames = 0;                    // how many frames in current rawState
+    private confirmedState: string | null = null;  // state that passed MIN_STATE_FRAMES
+    private bottomFrames = 0;                      // frames spent in s3 (bottom)
+    private lastRepTime = 0;                       // timestamp of last counted rep
+    private repInProgress = false;                 // true once s2 is confirmed (descent started)
+
+    // ── Tuning constants ──
+    private static readonly MIN_STATE_FRAMES = 3;     // must hold state for 3 frames to confirm
+    private static readonly MIN_BOTTOM_FRAMES = 2;    // must hold bottom for 2 frames
+    private static readonly MIN_REP_INTERVAL_MS = 800; // min 800ms between reps
+
     // Front-view specific state
-    private frontDisplayText = [false, false, false]; // valgus, hipShift, shoulderImbalance
+    private frontDisplayText = [false, false, false];
     private frontCountFrames = [0, 0, 0];
 
     public squatCount = 0;
@@ -257,6 +270,11 @@ export class SquatProcessor {
         this.incorrectPosture = false;
         this.prevState = null;
         this.currState = null;
+        this.rawState = null;
+        this.rawStateFrames = 0;
+        this.confirmedState = null;
+        this.bottomFrames = 0;
+        this.repInProgress = false;
     }
 
     private getState(kneeAngle: number): string | null {
@@ -276,6 +294,38 @@ export class SquatProcessor {
         return null;
     }
 
+    /**
+     * Confirm a raw state — only accept it after MIN_STATE_FRAMES consecutive frames.
+     * This prevents noise/flicker from being interpreted as intentional movement.
+     */
+    private confirmState(rawStateInput: string | null): string | null {
+        if (rawStateInput === this.rawState) {
+            this.rawStateFrames++;
+        } else {
+            this.rawState = rawStateInput;
+            this.rawStateFrames = 1;
+        }
+
+        // Only confirm after holding for minimum frames
+        if (this.rawStateFrames >= SquatProcessor.MIN_STATE_FRAMES) {
+            this.confirmedState = rawStateInput;
+        }
+
+        // Track bottom hold time
+        if (this.confirmedState === "s3") {
+            this.bottomFrames++;
+        } else {
+            this.bottomFrames = 0;
+        }
+
+        // Mark descent started
+        if (this.confirmedState === "s2" || this.confirmedState === "s3") {
+            this.repInProgress = true;
+        }
+
+        return this.confirmedState;
+    }
+
     private updateStateSequence(state: string | null) {
         if (!state) return;
         if (state === "s2") {
@@ -293,8 +343,57 @@ export class SquatProcessor {
     }
 
     /**
-     * Main process — routes to side or front view analysis.
+     * Count a rep only when:
+     * 1. Full state sequence completed (s2 → s3 → s2)
+     * 2. Bottom was held for MIN_BOTTOM_FRAMES
+     * 3. Enough time has passed since last rep (MIN_REP_INTERVAL_MS)
+     * 4. A descent was actually initiated (repInProgress)
      */
+    private countRep() {
+        const now = performance.now();
+        const timeSinceLastRep = now - this.lastRepTime;
+
+        // Not enough time since last rep — debounce
+        if (timeSinceLastRep < SquatProcessor.MIN_REP_INTERVAL_MS) {
+            this.stateSeq = [];
+            this.incorrectPosture = false;
+            this.repInProgress = false;
+            return;
+        }
+
+        // Only count if a descent was actually started
+        if (!this.repInProgress) {
+            this.stateSeq = [];
+            this.incorrectPosture = false;
+            return;
+        }
+
+        const hasFullSequence = this.stateSeq.length === 3; // [s2, s3, s2]
+        const hasBottomHold = this.bottomFrames >= SquatProcessor.MIN_BOTTOM_FRAMES || hasFullSequence;
+
+        if (hasFullSequence && !this.incorrectPosture && hasBottomHold) {
+            // ✅ Clean, complete rep
+            this.squatCount++;
+            this.lastRepTime = now;
+        } else if (hasFullSequence && this.incorrectPosture) {
+            // ❌ Complete rep but with form errors
+            this.improperSquat++;
+            this.lastRepTime = now;
+        } else if (this.stateSeq.includes("s2") && this.stateSeq.includes("s3") && this.incorrectPosture) {
+            // ❌ Reached bottom but with errors (even if s2 return not captured yet)
+            this.improperSquat++;
+            this.lastRepTime = now;
+        }
+        // Partial movements (s2 only, no s3) are SILENTLY IGNORED — not counted as anything
+
+        this.stateSeq = [];
+        this.incorrectPosture = false;
+        this.repInProgress = false;
+    }
+
+    /**
+ * Main process — routes to side or front view analysis.
+ */
     process(
         landmarks: NormalizedLandmark[],
         ctx: CanvasRenderingContext2D,
@@ -422,20 +521,14 @@ export class SquatProcessor {
             drawCircle(ctx, pt, 7, COLORS.yellow);
         });
 
-        const currentState = this.getState(kneeVertAngle);
+        const rawState = this.getState(kneeVertAngle);
+        const currentState = this.confirmState(rawState);
         this.currState = currentState;
         this.updateStateSequence(currentState);
 
         if (currentState === "s1") {
-            if (this.stateSeq.length === 3 && !this.incorrectPosture) {
-                this.squatCount++;
-            } else if (this.stateSeq.includes("s2") && this.stateSeq.length === 1) {
-                this.improperSquat++;
-            } else if (this.incorrectPosture) {
-                this.improperSquat++;
-            }
-            this.stateSeq = [];
-            this.incorrectPosture = false;
+            // Back to standing — evaluate the completed movement
+            this.countRep();
         } else {
             if (hipVertAngle > this.thresholds.HIP_THRESH[1]) {
                 this.displayText[0] = true;
@@ -652,21 +745,14 @@ export class SquatProcessor {
             "rgba(0,0,0,0.6)", COLORS.lightGreen, 11);
 
         // ── State machine (based on depth ratio) ──
-        const currentState = this.getFrontState(depthRatio);
+        const rawState = this.getFrontState(depthRatio);
+        const currentState = this.confirmState(rawState);
         this.currState = currentState;
         this.updateStateSequence(currentState);
 
         // ── Count reps ──
         if (currentState === "s1") {
-            if (this.stateSeq.length === 3 && !this.incorrectPosture) {
-                this.squatCount++;
-            } else if (this.stateSeq.includes("s2") && this.stateSeq.length === 1) {
-                this.improperSquat++;
-            } else if (this.incorrectPosture) {
-                this.improperSquat++;
-            }
-            this.stateSeq = [];
-            this.incorrectPosture = false;
+            this.countRep();
         } else {
             // ── Form checks ──
 

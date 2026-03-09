@@ -2,125 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
   :root {
-    --background: 150 30% 6%;
-    --foreground: 0 0% 98%;
+    /* ─── Matte Black Design System ─────────────────────────────── */
+    --background: 0 0% 2%;
+    --foreground: 0 0% 96%;
 
-    --card: 150 25% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 150 25% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 96%;
 
     --primary: 142 71% 45%;
-    --primary-foreground: 150 30% 6%;
+    --primary-foreground: 0 0% 2%;
 
-    --secondary: 150 20% 15%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 11%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 150 15% 20%;
-    --muted-foreground: 150 10% 55%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 53%;
 
     --accent: 142 71% 45%;
-    --accent-foreground: 150 30% 6%;
+    --accent-foreground: 0 0% 2%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 150 20% 18%;
-    --input: 150 20% 18%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
     --ring: 142 71% 45%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
     /* Custom FitLab colors */
     --fitlab-green: 142 71% 45%;
     --fitlab-green-glow: 142 80% 50%;
-    --fitlab-blue: 200 80% 55%;
-    --fitlab-orange: 25 95% 55%;
+    --fitlab-blue: 217 91% 60%;
+    --fitlab-orange: 25 95% 53%;
     --fitlab-purple: 270 60% 55%;
-    --fitlab-yellow: 45 90% 55%;
-    
-    /* Gradients */
-    --gradient-card: linear-gradient(135deg, hsl(150 25% 12%) 0%, hsl(150 25% 8%) 100%);
-    --gradient-glow: radial-gradient(circle at center, hsl(142 71% 45% / 0.15) 0%, transparent 70%);
+    --fitlab-yellow: 48 96% 53%;
+    --fitlab-red: 0 84% 60%;
 
-    --sidebar-background: 150 25% 8%;
-    --sidebar-foreground: 0 0% 98%;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 96%;
     --sidebar-primary: 142 71% 45%;
-    --sidebar-primary-foreground: 150 30% 6%;
-    --sidebar-accent: 150 20% 15%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 150 20% 18%;
+    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-accent: 0 0% 11%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 14%;
     --sidebar-ring: 142 71% 45%;
   }
 
-  .dark {
-    --background: 150 30% 6%;
-    --foreground: 0 0% 98%;
-    --card: 150 25% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 150 25% 8%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 150 30% 6%;
-    --secondary: 150 20% 15%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 150 15% 20%;
-    --muted-foreground: 150 10% 55%;
-    --accent: 142 71% 45%;
-    --accent-foreground: 150 30% 6%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 150 20% 18%;
-    --input: 150 20% 18%;
-    --ring: 142 71% 45%;
-    --sidebar-background: 150 25% 8%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 142 71% 45%;
-    --sidebar-primary-foreground: 150 30% 6%;
-    --sidebar-accent: 150 20% 15%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 150 20% 18%;
-    --sidebar-ring: 142 71% 45%;
-  }
-
-  .light {
-    --background: 0 0% 98%;
-    --foreground: 150 30% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 150 30% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 150 30% 10%;
-    --primary: 142 71% 40%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 150 15% 92%;
-    --secondary-foreground: 150 30% 10%;
-    --muted: 150 10% 92%;
-    --muted-foreground: 150 10% 45%;
-    --accent: 142 71% 40%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 150 10% 85%;
-    --input: 150 10% 85%;
-    --ring: 142 71% 40%;
-    --sidebar-background: 0 0% 97%;
-    --sidebar-foreground: 150 30% 10%;
-    --sidebar-primary: 142 71% 40%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 15% 92%;
-    --sidebar-accent-foreground: 150 30% 10%;
-    --sidebar-border: 150 10% 85%;
-    --sidebar-ring: 142 71% 40%;
-
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(150 10% 96%) 100%);
-    --gradient-glow: radial-gradient(circle at center, hsl(142 71% 45% / 0.08) 0%, transparent 70%);
-  }
+  /* No separate dark class needed — the app is always dark */
 }
+
+/* ─── Base Styles ────────────────────────────────────────────────── */
 
 @layer base {
   * {
@@ -128,21 +67,181 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior-y: contain;
+  }
+
+  /* Smooth scrolling everywhere */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Hide scrollbars but keep scrollable */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
+/* ─── Component Utilities ────────────────────────────────────────── */
+
 @layer utilities {
+
+  /* ── Solid Card — no blur, opaque, one border ── */
+  .solid-card {
+    @apply bg-card border border-border rounded-xl;
+    /* GPU-accelerated for smooth transitions */
+    transform: translateZ(0);
+  }
+
+  .solid-card-lg {
+    @apply bg-card border border-border rounded-2xl;
+    transform: translateZ(0);
+  }
+
+  /* ── Legacy glass-card mapped to solid (backward compat) ── */
   .glass-card {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl;
+    @apply bg-card border border-border rounded-2xl;
+    transform: translateZ(0);
   }
-  
+
+  /* ── Green glow for primary CTAs ── */
   .glow-green {
-    box-shadow: 0 0 20px hsl(142 71% 45% / 0.3), 0 0 40px hsl(142 71% 45% / 0.1);
+    box-shadow: 0 0 24px hsl(142 71% 45% / 0.25),
+      0 0 48px hsl(142 71% 45% / 0.08);
   }
-  
+
+  .glow-green-sm {
+    box-shadow: 0 0 12px hsl(142 71% 45% / 0.2);
+  }
+
+  /* ── Text gradient ── */
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-green-400;
   }
+
+  /* ── Stat number style — big, bold, monospaced ── */
+  .stat-number {
+    @apply font-black tracking-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Uppercase label ── */
+  .label-caps {
+    @apply text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground;
+  }
+
+  /* ── Interactive surface — subtle hover lift ── */
+  .surface-interactive {
+    @apply transition-all duration-150 ease-out;
+    transform: translateZ(0);
+  }
+
+  .surface-interactive:hover {
+    @apply border-border;
+    border-color: hsl(0 0% 20%);
+  }
+
+  .surface-interactive:active {
+    transform: scale(0.98) translateZ(0);
+  }
+
+  /* ── Pulse ring (for status indicators) ── */
+  .pulse-ring {
+    position: relative;
+  }
+
+  .pulse-ring::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    border: 2px solid currentColor;
+    opacity: 0;
+    animation: pulse-ring 2s ease-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+  }
+
+  /* ── Smooth fade-in on mount ── */
+  .animate-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Count-up number animation ── */
+  .animate-number {
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* ── GPU acceleration helper ── */
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  /* ── Progress ring (SVG-based circular progress) ── */
+  .progress-ring-bg {
+    stroke: hsl(0 0% 13%);
+    fill: none;
+  }
+
+  .progress-ring-fill {
+    fill: none;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: rotate(-90deg);
+    transform-origin: center;
+  }
+
+  /* ── Separator line ── */
+  .sep {
+    @apply h-px bg-border;
+  }
+}
+
+/* ─── Global Transition Overrides (Performance) ──────────────────── */
+
+/* Ensure all transitions use only compositor-friendly properties */
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Smooth page-level transitions */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
 }

@@ -35,6 +35,46 @@ export function getThresholdsPro(): Thresholds {
   };
 }
 
+// ─── Front-View Squat ─────────────────────────────────────────────────
+export interface FrontViewThresholds {
+  /** Ratio of knee-width / ankle-width below which = valgus (knees caving) */
+  KNEE_VALGUS_RATIO: number;
+  /** Max horizontal pixel diff between hip midpoints to detect lateral shift */
+  HIP_SHIFT_THRESH: number;
+  /** Max Y-pixel diff between left/right shoulders for balance */
+  SHOULDER_IMBALANCE_THRESH: number;
+  /** Hip-to-knee Y ratio thresholds: [standing, transition, deep] */
+  DEPTH_RATIO: { NORMAL: [number, number]; TRANS: [number, number]; PASS: [number, number] };
+  /** Min offset angle to confirm facing camera (front view) */
+  MIN_OFFSET: number;
+  INACTIVE_THRESH: number;
+  CNT_FRAME_THRESH: number;
+}
+
+export function getFrontViewBeginner(): FrontViewThresholds {
+  return {
+    KNEE_VALGUS_RATIO: 0.85,
+    HIP_SHIFT_THRESH: 25,
+    SHOULDER_IMBALANCE_THRESH: 20,
+    DEPTH_RATIO: { NORMAL: [0.0, 0.35], TRANS: [0.30, 0.65], PASS: [0.55, 1.0] },
+    MIN_OFFSET: 40,
+    INACTIVE_THRESH: 20.0,
+    CNT_FRAME_THRESH: 120,
+  };
+}
+
+export function getFrontViewPro(): FrontViewThresholds {
+  return {
+    KNEE_VALGUS_RATIO: 0.92,
+    HIP_SHIFT_THRESH: 15,
+    SHOULDER_IMBALANCE_THRESH: 12,
+    DEPTH_RATIO: { NORMAL: [0.0, 0.25], TRANS: [0.20, 0.50], PASS: [0.45, 0.85] },
+    MIN_OFFSET: 35,
+    INACTIVE_THRESH: 15.0,
+    CNT_FRAME_THRESH: 50,
+  };
+}
+
 // ─── Deadlift ─────────────────────────────────────────────────────────
 export interface DeadliftThresholds {
   HIP_VERT: { NORMAL: [number, number]; TRANS: [number, number]; PASS: [number, number] };

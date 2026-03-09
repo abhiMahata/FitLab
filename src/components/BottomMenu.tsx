@@ -1,5 +1,5 @@
-import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { ChevronUp, Dumbbell, Flame, Camera, Moon, User, ChevronRight } from "lucide-react";
+import { useRef, useEffect, useCallback, useState } from "react";
+import { Dumbbell, Flame, Camera, Moon, User, ChevronRight, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface BottomMenuProps {
@@ -43,130 +43,244 @@ const menuItems = [
   },
 ];
 
+// ─── Constants ────────────────────────────────────────────────────────
+const HANDLE_HEIGHT = 72;       // height of the grab bar area
+const SHEET_HEIGHT_VH = 65;     // % of viewport the sheet content occupies
+const SNAP_THRESHOLD = 80;      // px drag to trigger open/close
+const SPRING_TENSION = 0.15;    // animation speed (0-1, lower = smoother)
+
 const BottomMenu = ({ isOpen, onToggle }: BottomMenuProps) => {
   const navigate = useNavigate();
-  const dragControls = useDragControls();
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const dragStartY = useRef(0);
+  const currentTranslateY = useRef(0);
+  const animationRef = useRef<number>(0);
+  const [sheetHeight, setSheetHeight] = useState(0);
+
+  // Calculate full sheet height on mount
+  useEffect(() => {
+    const h = (window.innerHeight * SHEET_HEIGHT_VH) / 100 + HANDLE_HEIGHT;
+    setSheetHeight(h);
+  }, []);
+
+  // The collapsed position: only show the handle bar
+  const collapsedY = sheetHeight - HANDLE_HEIGHT;
+
+  // Animate to target position using spring-like easing
+  const animateTo = useCallback((targetY: number, onDone?: () => void) => {
+    const animate = () => {
+      const diff = targetY - currentTranslateY.current;
+      if (Math.abs(diff) < 0.5) {
+        currentTranslateY.current = targetY;
+        if (sheetRef.current) {
+          sheetRef.current.style.transform = `translateY(${targetY}px)`;
+        }
+        onDone?.();
+        return;
+      }
+      currentTranslateY.current += diff * SPRING_TENSION;
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = `translateY(${currentTranslateY.current}px)`;
+      }
+      animationRef.current = requestAnimationFrame(animate);
+    };
+    cancelAnimationFrame(animationRef.current);
+    animationRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  // Snap to open or collapsed when isOpen changes
+  useEffect(() => {
+    if (sheetHeight === 0) return;
+    const target = isOpen ? 0 : collapsedY;
+    animateTo(target);
+  }, [isOpen, sheetHeight, collapsedY, animateTo]);
+
+  // ── Touch handlers ─────────────────────────────────────────────────
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    isDragging.current = true;
+    dragStartY.current = e.touches[0].clientY - currentTranslateY.current;
+    cancelAnimationFrame(animationRef.current);
+  }, []);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    const y = e.touches[0].clientY - dragStartY.current;
+    // Clamp: can't drag above fully open (0) or below collapsed
+    const clamped = Math.max(0, Math.min(y, collapsedY + 20));
+    currentTranslateY.current = clamped;
+    if (sheetRef.current) {
+      sheetRef.current.style.transform = `translateY(${clamped}px)`;
+    }
+  }, [collapsedY]);
+
+  const onTouchEnd = useCallback(() => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+
+    const currentY = currentTranslateY.current;
+    const midpoint = collapsedY / 2;
+
+    if (isOpen) {
+      // If open and dragged down enough → close
+      if (currentY > SNAP_THRESHOLD) {
+        onToggle();
+      } else {
+        animateTo(0);
+      }
+    } else {
+      // If closed and dragged up enough → open
+      if (currentY < collapsedY - SNAP_THRESHOLD) {
+        onToggle();
+      } else {
+        animateTo(collapsedY);
+      }
+    }
+  }, [isOpen, collapsedY, animateTo, onToggle]);
+
+  // ── Mouse handlers (for desktop testing) ────────────────────────────
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragStartY.current = e.clientY - currentTranslateY.current;
+    cancelAnimationFrame(animationRef.current);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      const y = ev.clientY - dragStartY.current;
+      const clamped = Math.max(0, Math.min(y, collapsedY + 20));
+      currentTranslateY.current = clamped;
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = `translateY(${clamped}px)`;
+      }
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+
+      const currentY = currentTranslateY.current;
+      if (isOpen) {
+        if (currentY > SNAP_THRESHOLD) {
+          onToggle();
+        } else {
+          animateTo(0);
+        }
+      } else {
+        if (currentY < collapsedY - SNAP_THRESHOLD) {
+          onToggle();
+        } else {
+          animateTo(collapsedY);
+        }
+      }
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [isOpen, collapsedY, animateTo, onToggle]);
 
   const handleNavigate = (path: string) => {
     navigate(path);
     onToggle();
   };
 
+  // Content opacity based on position
+  const contentOpacity = sheetHeight > 0
+    ? Math.max(0, 1 - (currentTranslateY.current / collapsedY))
+    : 0;
+
   return (
     <>
-      {/* Overlay */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40"
-            onClick={onToggle}
-          />
-        )}
-      </AnimatePresence>
+      {/* Overlay — opacity tracks sheet position */}
+      <div
+        className="fixed inset-0 bg-black z-40 transition-opacity duration-150"
+        style={{
+          opacity: isOpen ? 0.7 : 0,
+          pointerEvents: isOpen ? "auto" : "none",
+        }}
+        onClick={onToggle}
+      />
 
-      {/* Bottom Bar / Menu */}
-      <motion.div
-        drag="y"
-        dragControls={dragControls}
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.2}
-        onDragEnd={(_, info) => {
-          if (info.offset.y < -50 && !isOpen) onToggle();
-          if (info.offset.y > 50 && isOpen) onToggle();
+      {/* Bottom Sheet */}
+      <div
+        ref={sheetRef}
+        className="fixed bottom-0 left-0 right-0 z-50 gpu"
+        style={{
+          height: `${sheetHeight}px`,
+          transform: `translateY(${sheetHeight - HANDLE_HEIGHT}px)`,
+          touchAction: "none",
         }}
-        animate={{
-          y: isOpen ? 0 : "calc(100% - 80px)",
-        }}
-        transition={{ type: "spring", damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-50"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
-        <div className="bg-card/95 backdrop-blur-xl rounded-t-3xl border-t border-border/50 min-h-[80vh] shadow-2xl">
-          {/* Handle */}
+        <div className="h-full bg-card rounded-t-2xl border-t border-border shadow-[0_-4px_30px_rgba(0,0,0,0.5)] flex flex-col">
+
+          {/* ── Handle Bar ── */}
           <div
-            className="flex flex-col items-center py-4 cursor-grab active:cursor-grabbing"
-            onClick={onToggle}
+            className="flex flex-col items-center pt-3 pb-2 cursor-grab active:cursor-grabbing select-none flex-shrink-0"
+            onMouseDown={onMouseDown}
+            onClick={() => { if (!isDragging.current) onToggle(); }}
           >
-            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mb-2" />
-            <motion.div
-              animate={{ rotate: isOpen ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ChevronUp className="w-6 h-6 text-primary" />
-            </motion.div>
-            <span className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
-              {isOpen ? "Swipe down to close" : "Swipe for tools"}
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mb-2" />
+            <ChevronUp
+              className="w-5 h-5 text-primary transition-transform duration-300"
+              style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+            <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] mt-0.5">
+              {isOpen ? "Drag to close" : "Menu"}
             </span>
           </div>
 
-          {/* Menu Content */}
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ delay: 0.1 }}
-                className="px-4 pb-8"
-              >
-                <h2 className="text-center text-lg font-semibold text-foreground mb-6 uppercase tracking-wider">
-                  Menu
-                </h2>
-
-                {/* Feature Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {menuItems.map((item, index) => (
-                    <motion.button
-                      key={item.id}
-                      initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 + index * 0.05, type: "spring" }}
-                      onClick={() => handleNavigate(item.path)}
-                      className="glass-card p-5 text-left relative overflow-hidden group hover:border-primary/50 transition-colors"
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.iconBg} mb-16`}
-                      >
-                        <item.icon className="w-6 h-6 text-primary-foreground" />
-                      </div>
-                      {item.badge && (
-                        <span className="absolute top-5 right-14 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full font-medium">
-                          {item.badge}
-                        </span>
-                      )}
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                        {item.category}
-                      </p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {item.title}
-                      </p>
-                    </motion.button>
-                  ))}
-                </div>
-
-                {/* Profile Section */}
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  onClick={() => handleNavigate("/profile")}
-                  className="w-full glass-card p-4 flex items-center gap-4"
+          {/* ── Menu Content (always rendered, opacity controlled) ── */}
+          <div
+            className="flex-1 px-5 pb-8 overflow-hidden"
+            style={{ opacity: isOpen ? 1 : 0, transition: "opacity 0.15s ease" }}
+          >
+            {/* Feature Grid */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {menuItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavigate(item.path)}
+                  className="solid-card p-4 text-left relative overflow-hidden group active:scale-[0.97] transition-transform"
                 >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-fitlab-orange to-fitlab-yellow flex items-center justify-center">
-                    <User className="w-6 h-6 text-primary-foreground" />
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.iconBg} mb-8`}
+                  >
+                    <item.icon className="w-5 h-5 text-primary-foreground" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-foreground">Profile & Settings</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  {item.badge && (
+                    <span className="absolute top-4 right-4 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded font-bold">
+                      {item.badge}
+                    </span>
+                  )}
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-[0.12em] mb-0.5">
+                    {item.category}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground leading-tight">
+                    {item.title}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            {/* Profile Row */}
+            <button
+              onClick={() => handleNavigate("/profile")}
+              className="w-full solid-card p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform"
+            >
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                <User className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <span className="flex-1 text-left text-sm font-semibold text-foreground">
+                Profile & Settings
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
-      </motion.div>
+      </div>
     </>
   );
 };

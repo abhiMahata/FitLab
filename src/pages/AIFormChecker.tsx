@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowLeft, Dumbbell, User, Minus, Plus, Sparkles, Loader2, Video, RotateCcw, SwitchCamera } from "lucide-react";
+import { ArrowLeft, Dumbbell, User, Minus, Plus, Sparkles, Loader2, Video, RotateCcw, SwitchCamera, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ExerciseCard from "@/components/ExerciseCard";
 import BottomMenu from "@/components/BottomMenu";
 import { usePoseLandmarker } from "@/hooks/usePoseLandmarker";
-import { type ExerciseStats, type IExerciseProcessor } from "@/lib/poseUtils";
+import { type ExerciseStats, type IExerciseProcessor, type CameraView } from "@/lib/poseUtils";
 import { SquatProcessor } from "@/lib/squatProcessor";
 import { DeadliftProcessor } from "@/lib/deadliftProcessor";
 import { BenchPressProcessor } from "@/lib/benchProcessor";
@@ -20,6 +20,7 @@ import {
   getBenchBeginner, getBenchPro,
   getOHPBeginner, getOHPPro,
   getLungeBeginner, getLungePro,
+  getFrontViewBeginner, getFrontViewPro,
 } from "@/lib/thresholds";
 
 function createProcessor(exercise: string, mode: "Beginner" | "Pro"): IExerciseProcessor {
@@ -32,9 +33,15 @@ function createProcessor(exercise: string, mode: "Beginner" | "Pro"): IExerciseP
     case "Push-ups": return new PushupProcessor(b ? getPushupBeginner() : getPushupPro());
     case "Pull-ups": return new PullupProcessor(b ? getPullupBeginner() : getPullupPro());
     case "Spot Jogging": return new JoggingProcessor(b ? getJoggingBeginner() : getJoggingPro());
-    default: return new SquatProcessor(b ? getThresholdsBeginner() : getThresholdsPro());
+    default: return new SquatProcessor(
+      b ? getThresholdsBeginner() : getThresholdsPro(),
+      b ? getFrontViewBeginner() : getFrontViewPro()
+    );
   }
 }
+
+/** Exercises that support front-view analysis */
+const FRONT_VIEW_EXERCISES = ["Squat"];
 
 const exercises = [
   { name: "Squat", category: "Lower Body", iconType: "squat" },
@@ -54,6 +61,7 @@ const AIFormChecker = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [mode] = useState<"Beginner" | "Pro">("Beginner");
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [cameraView, setCameraView] = useState<CameraView>("side");
   const [poseDetected, setPoseDetected] = useState(false);
   const [stats, setStats] = useState<ExerciseStats>({
     correctCount: 0,
@@ -89,7 +97,17 @@ const AIFormChecker = () => {
   const handleExerciseSelect = (name: string) => {
     setSelectedExercise(name);
     processorRef.current = createProcessor(name, mode);
+    setCameraView("side"); // reset view on exercise change
     setTimeout(() => setShowCamera(true), 300);
+  };
+
+  // Toggle between side and front view
+  const handleToggleCameraView = () => {
+    const newView = cameraView === "side" ? "front" : "side";
+    setCameraView(newView);
+    if (processorRef.current.setCameraView) {
+      processorRef.current.setCameraView(newView);
+    }
   };
 
   // Start camera (re-runs when facingMode changes)
@@ -349,18 +367,18 @@ const AIFormChecker = () => {
               <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
                 <button
                   onClick={handleBack}
-                  className="w-12 h-12 rounded-full bg-black/50 backdrop-blur flex items-center justify-center"
+                  className="w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center"
                 >
                   <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-white uppercase bg-black/40 backdrop-blur px-3 py-1.5 rounded-full">
+                  <span className="text-lg font-bold text-white uppercase bg-card border border-border px-3 py-1.5 rounded-full">
                     {selectedExercise}
                   </span>
                 </div>
 
-                <div className="text-right bg-black/40 backdrop-blur px-3 py-1.5 rounded-xl">
+                <div className="text-right bg-card border border-border px-3 py-1.5 rounded-xl">
                   <span className="text-3xl font-bold text-primary">
                     {String(stats.correctCount).padStart(2, "0")}
                   </span>
@@ -378,11 +396,11 @@ const AIFormChecker = () => {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ delay: idx * 0.05 }}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-bold backdrop-blur ${msg.includes("DEEP") || msg.includes("KNEE") || msg.includes("NOT ALIGNED")
-                        ? "bg-red-500/80 text-white"
-                        : msg.includes("LOWER") || msg.includes("BEND")
-                          ? "bg-orange-500/80 text-white"
-                          : "bg-white/20 text-white"
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold ${msg.includes("DEEP") || msg.includes("KNEE") || msg.includes("CAVING") || msg.includes("NOT ALIGNED") || msg.includes("FACE THE")
+                          ? "bg-red-500/90 text-white"
+                          : msg.includes("LOWER") || msg.includes("BEND") || msg.includes("HIP SHIFT") || msg.includes("SHOULDER")
+                            ? "bg-orange-500/90 text-white"
+                            : "bg-card border border-border text-white"
                         }`}
                     >
                       {msg}
@@ -402,7 +420,7 @@ const AIFormChecker = () => {
               {/* Bottom Controls */}
               <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
                 {/* Stats Bar */}
-                <div className="bg-black/50 backdrop-blur-xl rounded-2xl p-4 mb-4 border border-white/10">
+                <div className="bg-card rounded-2xl p-4 mb-4 border border-border">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex gap-4">
                       <div>
@@ -438,24 +456,41 @@ const AIFormChecker = () => {
                 </div>
 
                 {/* Control Buttons */}
-                <div className="flex items-center justify-center gap-6">
+                <div className="flex items-center justify-center gap-4">
                   <button
                     onClick={() => setFacingMode((prev) => prev === "user" ? "environment" : "user")}
-                    className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/10"
+                    className="w-13 h-13 rounded-xl bg-card flex items-center justify-center border border-border"
                   >
-                    <SwitchCamera className="w-6 h-6 text-white" />
+                    <SwitchCamera className="w-5 h-5 text-white" />
                   </button>
+
+                  {/* Side/Front toggle — only for supported exercises */}
+                  {selectedExercise && FRONT_VIEW_EXERCISES.includes(selectedExercise) && (
+                    <button
+                      onClick={handleToggleCameraView}
+                      className={`h-13 px-4 rounded-xl flex items-center justify-center gap-2 border transition-colors ${cameraView === "front"
+                        ? "bg-primary/15 border-primary text-primary"
+                        : "bg-card border-border text-white"
+                        }`}
+                    >
+                      <Eye className="w-5 h-5" />
+                      <span className="text-xs font-bold uppercase tracking-wider">
+                        {cameraView === "side" ? "Side" : "Front"}
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     onClick={handleReset}
-                    className="w-16 h-16 rounded-full bg-primary flex items-center justify-center glow-green"
+                    className="w-14 h-14 rounded-full bg-primary flex items-center justify-center glow-green"
                   >
-                    <RotateCcw className="w-7 h-7 text-primary-foreground" />
+                    <RotateCcw className="w-6 h-6 text-primary-foreground" />
                   </button>
                   <button
                     onClick={handleBack}
-                    className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/10"
+                    className="w-13 h-13 rounded-xl bg-card flex items-center justify-center border border-border"
                   >
-                    <Video className="w-6 h-6 text-white" />
+                    <Video className="w-5 h-5 text-white" />
                   </button>
                 </div>
               </div>

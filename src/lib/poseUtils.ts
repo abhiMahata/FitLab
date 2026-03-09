@@ -55,6 +55,8 @@ export interface ExerciseStats {
     currentState: string | null;
 }
 
+export type CameraView = "side" | "front";
+
 export interface IExerciseProcessor {
     process(
         landmarks: NormalizedLandmark[],
@@ -64,6 +66,8 @@ export interface IExerciseProcessor {
     ): ExerciseStats;
     processNoPose(): ExerciseStats;
     reset(): void;
+    /** Optional: set camera view for processors that support front/side analysis */
+    setCameraView?(view: CameraView): void;
 }
 
 export type FeedbackEntry = [string, string]; // [message, color]

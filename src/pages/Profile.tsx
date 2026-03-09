@@ -147,7 +147,7 @@ const Profile = () => {
                 transition={{ delay: 0.1 }}
                 className="px-6 mb-8"
             >
-                <div className="glass-card p-5 flex items-center justify-around">
+                <div className="solid-card-lg p-5 flex items-center justify-around">
                     <div className="flex flex-col items-center">
                         <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center mb-2">
                             <Clock className="w-5 h-5 text-primary" />
@@ -181,7 +181,7 @@ const Profile = () => {
                 transition={{ delay: 0.2 }}
                 className="px-6"
             >
-                <div className="glass-card overflow-hidden divide-y divide-border">
+                <div className="solid-card-lg overflow-hidden divide-y divide-border">
                     {settingsSections.map((section, index) => (
                         <motion.button
                             key={section.label}
@@ -212,7 +212,7 @@ const Profile = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
                         onClick={() => setIsEditing(false)}
                     >
                         <motion.div
@@ -220,7 +220,7 @@ const Profile = () => {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 30 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="glass-card p-6 w-full max-w-sm"
+                            className="solid-card-lg p-6 w-full max-w-sm"
                         >
                             <h3 className="text-xl font-bold text-foreground mb-6">Edit Profile</h3>
 
@@ -273,7 +273,7 @@ const Profile = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
                         onClick={() => setShowGeneral(false)}
                     >
                         <motion.div
@@ -281,7 +281,7 @@ const Profile = () => {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 30 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="glass-card p-6 w-full max-w-sm"
+                            className="solid-card-lg p-6 w-full max-w-sm"
                         >
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-bold text-foreground">General</h3>
@@ -337,7 +337,7 @@ const Profile = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
+                        className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center"
                         onClick={() => setShowHelp(false)}
                     >
                         <motion.div
@@ -345,10 +345,10 @@ const Profile = () => {
                             animate={{ y: 0 }}
                             exit={{ y: 100 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-card rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto border border-border/50"
+                            className="bg-card rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto border border-border"
                         >
                             {/* Header */}
-                            <div className="sticky top-0 bg-card/95 backdrop-blur-xl p-6 pb-4 border-b border-border/50 flex items-center justify-between">
+                            <div className="sticky top-0 bg-card p-6 pb-4 border-b border-border flex items-center justify-between">
                                 <div>
                                     <h3 className="text-xl font-bold text-foreground">FitLab Guide</h3>
                                     <p className="text-sm text-muted-foreground mt-0.5">How the app works</p>
@@ -364,7 +364,7 @@ const Profile = () => {
                             {/* App Flow */}
                             <div className="p-6 space-y-2">
                                 {/* Overview */}
-                                <div className="glass-card p-4 mb-4">
+                                <div className="solid-card p-4 mb-4">
                                     <p className="text-sm text-muted-foreground leading-relaxed">
                                         <span className="text-primary font-semibold">FitLab</span> is your all-in-one fitness companion.
                                         Use the <span className="text-foreground font-medium">swipe-up menu</span> from any
@@ -380,7 +380,7 @@ const Profile = () => {
                                         initial={{ opacity: 0, y: 15 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.1 + idx * 0.08 }}
-                                        className="glass-card p-5"
+                                        className="solid-card p-5"
                                     >
                                         <div className="flex items-center gap-3 mb-3">
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${section.iconBg}`}>

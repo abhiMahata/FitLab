@@ -476,7 +476,7 @@ const WorkoutRoster = () => {
                 {groupedFiltered.map((group) => (
                   <div key={group.muscle}>
                     {/* Group header */}
-                    <div className="flex items-center gap-2 mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">
+                    <div className="flex items-center gap-2 mb-3 sticky top-0 bg-background py-2 z-10">
                       <span className="text-xl">{MUSCLE_ICONS[group.muscle]}</span>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${MUSCLE_COLORS[group.muscle]}`}>
                         {group.muscle}

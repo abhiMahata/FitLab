@@ -240,7 +240,7 @@ const AlarmScreen = ({ onDismiss }: AlarmScreenProps) => {
                     {/* ── MATH PUZZLE ── */}
                     {puzzleType === "math" && (
                         <div className="w-full max-w-sm text-center">
-                            <div className="glass-card p-6 mb-6">
+                            <div className="solid-card p-6 mb-6">
                                 <p className="text-muted-foreground text-sm uppercase tracking-wider mb-2">
                                     Solve to dismiss
                                 </p>
@@ -271,7 +271,7 @@ const AlarmScreen = ({ onDismiss }: AlarmScreenProps) => {
                     {/* ── SEQUENCE PUZZLE ── */}
                     {puzzleType === "sequence" && (
                         <div className="w-full max-w-sm text-center">
-                            <div className="glass-card p-6 mb-6">
+                            <div className="solid-card p-6 mb-6">
                                 <p className="text-muted-foreground text-sm uppercase tracking-wider mb-2">
                                     {seqPhase === "showing" ? "Watch the sequence..." : "Repeat the sequence!"}
                                 </p>
@@ -286,8 +286,8 @@ const AlarmScreen = ({ onDismiss }: AlarmScreenProps) => {
                                             onClick={() => handleSeqTap(idx)}
                                             disabled={seqPhase === "showing"}
                                             className={`aspect-square rounded-2xl transition-all duration-200 ${seqHighlight === idx
-                                                    ? TILE_ACTIVE_COLORS[idx]
-                                                    : `${TILE_COLORS[idx]} opacity-40`
+                                                ? TILE_ACTIVE_COLORS[idx]
+                                                : `${TILE_COLORS[idx]} opacity-40`
                                                 }`}
                                         />
                                     ))}
@@ -299,7 +299,7 @@ const AlarmScreen = ({ onDismiss }: AlarmScreenProps) => {
                     {/* ── TAP PUZZLE ── */}
                     {puzzleType === "tap" && (
                         <div className="w-full max-w-sm text-center">
-                            <div className="glass-card p-6 mb-6">
+                            <div className="solid-card p-6 mb-6">
                                 <p className="text-muted-foreground text-sm uppercase tracking-wider mb-2">
                                     Tap rapidly to dismiss!
                                 </p>
@@ -326,7 +326,7 @@ const AlarmScreen = ({ onDismiss }: AlarmScreenProps) => {
                     {/* ── TYPE PUZZLE ── */}
                     {puzzleType === "type" && (
                         <div className="w-full max-w-sm text-center">
-                            <div className="glass-card p-6 mb-6">
+                            <div className="solid-card p-6 mb-6">
                                 <p className="text-muted-foreground text-sm uppercase tracking-wider mb-2">
                                     Type exactly to dismiss
                                 </p>

@@ -304,7 +304,7 @@ const AIFormChecker = () => {
 
             {/* AI Insights Banner */}
             <section className="px-6">
-              <div className="glass-card p-5 border-l-4 border-primary">
+              <div className="solid-card p-5 border-l-4 border-primary">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-5 h-5 text-primary" />
                   <span className="text-primary font-semibold uppercase tracking-wider text-sm">
@@ -397,10 +397,10 @@ const AIFormChecker = () => {
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ delay: idx * 0.05 }}
                       className={`px-3 py-1.5 rounded-lg text-sm font-bold ${msg.includes("DEEP") || msg.includes("KNEE") || msg.includes("CAVING") || msg.includes("NOT ALIGNED") || msg.includes("FACE THE")
-                          ? "bg-red-500/90 text-white"
-                          : msg.includes("LOWER") || msg.includes("BEND") || msg.includes("HIP SHIFT") || msg.includes("SHOULDER")
-                            ? "bg-orange-500/90 text-white"
-                            : "bg-card border border-border text-white"
+                        ? "bg-red-500/90 text-white"
+                        : msg.includes("LOWER") || msg.includes("BEND") || msg.includes("HIP SHIFT") || msg.includes("SHOULDER")
+                          ? "bg-orange-500/90 text-white"
+                          : "bg-card border border-border text-white"
                         }`}
                     >
                       {msg}

@@ -21,7 +21,7 @@ const StatCard = ({
   progressColor = "bg-primary",
 }: StatCardProps) => {
   return (
-    <div className="glass-card p-4 flex items-center gap-4">
+    <div className="solid-card p-4 flex items-center gap-4">
       <div
         className={`w-14 h-14 rounded-2xl flex items-center justify-center ${iconBg}`}
       >

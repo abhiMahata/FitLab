@@ -11,7 +11,7 @@ interface FoodItemProps {
 
 const FoodItem = ({ name, calories, protein, carbs, fat, onAdd }: FoodItemProps) => {
   return (
-    <div className="glass-card p-4 flex items-center justify-between">
+    <div className="solid-card p-4 flex items-center justify-between">
       <div>
         <h3 className="font-semibold text-foreground">{name}</h3>
         <div className="flex gap-2 mt-2">

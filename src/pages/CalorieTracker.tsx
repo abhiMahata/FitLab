@@ -210,8 +210,8 @@ const CalorieTracker = () => {
                 key={day}
                 onClick={() => setSelectedDay(i)}
                 className={`flex-shrink-0 px-3 py-2.5 rounded-xl text-center transition-all ${isSelected
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
                   }`}
               >
                 <p className="text-xs font-bold uppercase">{day.slice(0, 3)}</p>
@@ -229,7 +229,7 @@ const CalorieTracker = () => {
 
       {/* Calorie Arc Gauge */}
       <section className="px-6 mb-2">
-        <div className="glass-card p-5 pb-2">
+        <div className="solid-card p-5 pb-2">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold text-foreground">Calories</h2>
             <span className="text-sm text-muted-foreground">Goal: {CALORIE_GOAL.toLocaleString()} kcal</span>
@@ -246,7 +246,7 @@ const CalorieTracker = () => {
       <section className="px-6 mt-4">
         <div className="space-y-4">
           {mealGroups.map((meal) => (
-            <div key={meal.type} className="glass-card p-4">
+            <div key={meal.type} className="solid-card p-4">
               {/* Meal header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2.5">
@@ -333,8 +333,8 @@ const CalorieTracker = () => {
                       key={m.type}
                       onClick={() => setAddMeal(m.type)}
                       className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${addMeal === m.type
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
                         }`}
                     >
                       {m.emoji} {m.type.slice(0, 4)}

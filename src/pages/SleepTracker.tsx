@@ -276,7 +276,7 @@ const SleepTracker = () => {
           >
             {/* Sleep Score Ring */}
             <section className="px-6 mb-6">
-              <div className="glass-card p-6 text-center">
+              <div className="solid-card p-6 text-center">
                 <div className="relative w-40 h-40 mx-auto mb-4">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
@@ -320,7 +320,7 @@ const SleepTracker = () => {
                     { label: "Wake Up", value: formatTime(todayEntry.wakeTime), icon: Sun },
                     { label: "Duration", value: formatDuration(todayEntry.durationMin), icon: Clock },
                   ].map((s) => (
-                    <div key={s.label} className="glass-card p-4 text-center">
+                    <div key={s.label} className="solid-card p-4 text-center">
                       <s.icon className="w-5 h-5 text-primary mx-auto mb-2" />
                       <p className="text-xs text-muted-foreground uppercase tracking-wider">{s.label}</p>
                       <p className="text-base font-bold text-foreground">{s.value}</p>
@@ -332,7 +332,7 @@ const SleepTracker = () => {
 
             {/* Alarm Setting */}
             <section className="px-6 mb-5">
-              <div className="glass-card p-5">
+              <div className="solid-card p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl bg-fitlab-orange/20 flex items-center justify-center">
@@ -416,7 +416,7 @@ const SleepTracker = () => {
                   </span>
                 )}
               </div>
-              <div className="glass-card p-5">
+              <div className="solid-card p-5">
                 <div className="flex items-end justify-between gap-2 h-28">
                   {weekEntries.map((entry, i) => {
                     const d = new Date();
@@ -458,7 +458,7 @@ const SleepTracker = () => {
                 <div className="space-y-3">
                   {/* Duration trend */}
                   {entries.length >= 2 && (
-                    <div className="glass-card p-4">
+                    <div className="solid-card p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 className="font-semibold text-foreground">Avg Sleep Duration</h3>
@@ -490,7 +490,7 @@ const SleepTracker = () => {
                       Math.sqrt(bedtimes.reduce((s, t) => s + (t - avg) ** 2, 0) / bedtimes.length)
                     );
                     return (
-                      <div className="glass-card p-4">
+                      <div className="solid-card p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h3 className="font-semibold text-foreground">Sleep Consistency</h3>
@@ -512,7 +512,7 @@ const SleepTracker = () => {
 
             {/* Sleep Tip */}
             <section className="px-6">
-              <div className="glass-card p-5 border-l-4 border-primary">
+              <div className="solid-card p-5 border-l-4 border-primary">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-5 h-5 text-primary" />
                   <span className="text-primary font-semibold uppercase tracking-wider text-sm">
@@ -534,7 +534,7 @@ const SleepTracker = () => {
             exit={{ opacity: 0 }}
             className="px-6"
           >
-            <div className="glass-card p-8 text-center mb-8">
+            <div className="solid-card p-8 text-center mb-8">
               {/* Moon animation */}
               <motion.div
                 animate={{ y: [0, -10, 0] }}
@@ -598,7 +598,7 @@ const SleepTracker = () => {
             exit={{ opacity: 0 }}
             className="px-6"
           >
-            <div className="glass-card p-6 text-center mb-6">
+            <div className="solid-card p-6 text-center mb-6">
               <Sun className="w-12 h-12 text-primary mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-foreground mb-2">Good Morning!</h2>
               <p className="text-muted-foreground">
@@ -614,7 +614,7 @@ const SleepTracker = () => {
             </div>
 
             {/* Quality Rating */}
-            <div className="glass-card p-6 mb-4">
+            <div className="solid-card p-6 mb-4">
               <h3 className="text-foreground font-semibold mb-4">How was your sleep?</h3>
               <div className="flex justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -644,7 +644,7 @@ const SleepTracker = () => {
             </div>
 
             {/* Mood */}
-            <div className="glass-card p-6 mb-6">
+            <div className="solid-card p-6 mb-6">
               <h3 className="text-foreground font-semibold mb-4">How do you feel?</h3>
               <div className="flex justify-center gap-3">
                 {MOODS.map((mood, i) => (

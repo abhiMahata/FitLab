@@ -315,7 +315,7 @@ const WorkoutRoster = () => {
             {/* Exercise List */}
             <section className="px-6 mb-6">
               {dayRoster.exercises.length === 0 ? (
-                <div className="glass-card p-8 text-center">
+                <div className="solid-card p-8 text-center">
                   <Dumbbell className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-muted-foreground">No exercises yet</p>
                   <p className="text-sm text-muted-foreground/60 mt-1">Tap + to browse and add exercises</p>
@@ -342,7 +342,7 @@ const WorkoutRoster = () => {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: idx * 0.05 }}
-                              className="glass-card p-4"
+                              className="solid-card p-4"
                             >
                               <div className="flex items-center gap-3 mb-3">
                                 <span className="text-2xl">{ex.emoji}</span>
@@ -492,7 +492,7 @@ const WorkoutRoster = () => {
                             key={ex.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className={`glass-card p-4 flex items-center gap-3 ${alreadyAdded ? "opacity-50" : ""}`}
+                            className={`solid-card p-4 flex items-center gap-3 ${alreadyAdded ? "opacity-50" : ""}`}
                           >
                             <span className="text-2xl">{ex.emoji}</span>
                             <div className="flex-1 min-w-0">
@@ -563,7 +563,7 @@ const WorkoutRoster = () => {
                 <>
                   {/* Current Exercise */}
                   <section className="px-6 mb-6">
-                    <div className="glass-card p-6 text-center">
+                    <div className="solid-card p-6 text-center">
                       <motion.span
                         key={currEx.id}
                         initial={{ scale: 0.5, opacity: 0 }}
@@ -586,7 +586,7 @@ const WorkoutRoster = () => {
 
                   {/* Set tracker */}
                   <section className="px-6 mb-6">
-                    <div className="glass-card p-5">
+                    <div className="solid-card p-5">
                       <div className="flex items-center justify-between mb-4">
                         <p className="text-foreground font-semibold">
                           Set {currentSet} of {currRosterEx.sets}
@@ -614,7 +614,7 @@ const WorkoutRoster = () => {
                   {/* Rest timer or Complete button */}
                   <section className="px-6">
                     {isResting ? (
-                      <div className="glass-card p-6 text-center">
+                      <div className="solid-card p-6 text-center">
                         <Timer className="w-8 h-8 text-primary mx-auto mb-2" />
                         <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Rest</p>
                         <p className="text-5xl font-bold text-foreground font-mono mb-4">{fmt(restTime)}</p>

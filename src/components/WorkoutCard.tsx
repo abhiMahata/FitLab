@@ -10,7 +10,7 @@ interface WorkoutCardProps {
 
 const WorkoutCard = ({ name, sets, reps, focus, hasAI = false }: WorkoutCardProps) => {
   return (
-    <div className="glass-card p-4 flex items-center gap-4">
+    <div className="solid-card p-4 flex items-center gap-4">
       <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center">
         <Dumbbell className="w-7 h-7 text-primary" />
       </div>

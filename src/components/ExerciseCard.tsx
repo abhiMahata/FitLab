@@ -22,10 +22,10 @@ const ExerciseCard = ({
     <button
       onClick={onClick}
       className={cn(
-        "p-5 rounded-2xl flex flex-col items-start transition-all",
+        "p-5 rounded-2xl flex flex-col items-start transition-all active:scale-[0.97]",
         isDashed
           ? "border-2 border-dashed border-muted-foreground/30 bg-transparent hover:border-primary/50"
-          : "glass-card hover:border-primary/50",
+          : "solid-card hover:border-primary/40",
         isSelected && "border-primary bg-primary/10"
       )}
     >
@@ -42,8 +42,8 @@ const ExerciseCard = ({
           )}
         />
       </div>
-      <h3 className="font-bold text-foreground text-lg">{name}</h3>
-      <p className="text-sm text-muted-foreground uppercase tracking-wider">
+      <h3 className="font-bold text-foreground text-lg leading-tight">{name}</h3>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-[0.12em] mt-1">
         {category}
       </p>
     </button>

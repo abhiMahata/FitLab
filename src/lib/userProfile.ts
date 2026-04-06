@@ -25,6 +25,7 @@ export function getProfile(): UserProfile | null {
 
 export function saveProfile(profile: UserProfile) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  import("./cloudSync").then(m => m.syncNow()).catch(() => {});
 }
 
 // Mifflin-St Jeor Equation

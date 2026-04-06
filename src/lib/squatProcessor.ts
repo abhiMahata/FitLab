@@ -218,6 +218,15 @@ export class SquatProcessor {
     private static readonly MIN_BOTTOM_FRAMES = 2;    // must hold bottom for 2 frames
     private static readonly MIN_REP_INTERVAL_MS = 800; // min 800ms between reps
 
+    // ── Hardening: anti-cheat validation ──
+    private standingHipY = 0;           // hip Y when standing (s1)
+    private standingAnkleY = 0;         // ankle Y when standing (front view)
+    private hipDropValidated = false;   // true if hips dropped enough for real squat
+    private static readonly MIN_HIP_DROP_RATIO = 0.12;   // hips must drop ≥12% of body height
+    private static readonly MIN_TORSO_TILT = 15;         // torso must tilt ≥15° in side view
+    private static readonly MAX_TORSO_TILT = 80;         // torso must not tilt >80°
+    private static readonly MAX_ANKLE_SHIFT_RATIO = 0.12; // ankles can't move >12% of body height (front)
+
     // Front-view specific state
     private frontDisplayText = [false, false, false];
     private frontCountFrames = [0, 0, 0];
@@ -275,6 +284,9 @@ export class SquatProcessor {
         this.confirmedState = null;
         this.bottomFrames = 0;
         this.repInProgress = false;
+        this.standingHipY = 0;
+        this.standingAnkleY = 0;
+        this.hipDropValidated = false;
     }
 
     private getState(kneeAngle: number): string | null {
@@ -526,10 +538,34 @@ export class SquatProcessor {
         this.currState = currentState;
         this.updateStateSequence(currentState);
 
+        // ── Hardening: body reference height for proportional checks ──
+        const bodyRefH = Math.max(1, Math.abs(shldr.y - ankle.y));
+
         if (currentState === "s1") {
+            // Store standing position for hip-drop validation
+            this.standingHipY = hip.y;
+            this.hipDropValidated = false;
             // Back to standing — evaluate the completed movement
             this.countRep();
         } else {
+            // ── Hardening: hip-drop validation ──
+            // Real squat = hips must drop meaningfully from standing position
+            if (this.standingHipY > 0 && (currentState === "s2" || currentState === "s3")) {
+                const hipDrop = hip.y - this.standingHipY; // positive = dropped down
+                if (hipDrop > SquatProcessor.MIN_HIP_DROP_RATIO * bodyRefH) {
+                    this.hipDropValidated = true;
+                }
+            }
+
+            // ── Hardening: torso-tilt requirement ──
+            // In a real squat the torso tilts forward. If torso stays perfectly upright,
+            // the user may just be shifting knees forward.
+            if ((currentState === "s2" || currentState === "s3") &&
+                hipVertAngle < SquatProcessor.MIN_TORSO_TILT) {
+                // Torso not tilting at all — suspicious, flag as improper
+                this.incorrectPosture = true;
+            }
+
             if (hipVertAngle > this.thresholds.HIP_THRESH[1]) {
                 this.displayText[0] = true;
             } else if (hipVertAngle < this.thresholds.HIP_THRESH[0] && this.stateSeq.filter((s) => s === "s2").length === 1) {
@@ -549,6 +585,11 @@ export class SquatProcessor {
 
             if (ankleVertAngle > this.thresholds.ANKLE_THRESH) {
                 this.displayText[2] = true;
+                this.incorrectPosture = true;
+            }
+
+            // ── Hardening: if bottom reached but hips didn't actually drop ──
+            if (currentState === "s3" && !this.hipDropValidated) {
                 this.incorrectPosture = true;
             }
         }
@@ -752,8 +793,35 @@ export class SquatProcessor {
 
         // ── Count reps ──
         if (currentState === "s1") {
+            // Store standing ankle position for stability check
+            this.standingAnkleY = (lAnkle.y + rAnkle.y) / 2;
+            this.standingHipY = hipMidY;
+            this.hipDropValidated = false;
             this.countRep();
         } else {
+            // ── Hardening: hip-drop validation (front view) ──
+            const bodyRefH = Math.max(1, Math.abs(shoulderMidY - (lAnkle.y + rAnkle.y) / 2));
+            if (this.standingHipY > 0 && (currentState === "s2" || currentState === "s3")) {
+                const hipDrop = hipMidY - this.standingHipY;
+                if (hipDrop > SquatProcessor.MIN_HIP_DROP_RATIO * bodyRefH) {
+                    this.hipDropValidated = true;
+                }
+            }
+            // Store standing hip for next cycle (initialize if not yet set)
+            if (this.standingHipY === 0) {
+                this.standingHipY = hipMidY;
+            }
+
+            // ── Hardening: ankle-stability check ──
+            // If ankles move vertically too much, user may be sitting on a chair
+            if (this.standingAnkleY > 0 && (currentState === "s2" || currentState === "s3")) {
+                const currentAnkleY = (lAnkle.y + rAnkle.y) / 2;
+                const ankleShift = Math.abs(currentAnkleY - this.standingAnkleY);
+                if (ankleShift > SquatProcessor.MAX_ANKLE_SHIFT_RATIO * bodyRefH) {
+                    this.incorrectPosture = true;
+                }
+            }
+
             // ── Form checks ──
 
             // Knee valgus
@@ -771,6 +839,11 @@ export class SquatProcessor {
             // Shoulder imbalance
             if (shoulderDiff > ft.SHOULDER_IMBALANCE_THRESH) {
                 this.frontDisplayText[2] = true;
+            }
+
+            // ── Hardening: if bottom reached but hips didn't drop (front view) ──
+            if (currentState === "s3" && !this.hipDropValidated) {
+                this.incorrectPosture = true;
             }
         }
 

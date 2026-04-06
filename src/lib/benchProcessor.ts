@@ -37,6 +37,12 @@ export class BenchPressProcessor implements IExerciseProcessor {
     public repCount = 0;
     public improperRep = 0;
 
+    // ── Hardening: anti-cheat validation ──
+    private wristYAtTop = 0;               // wrist Y at lockout (s1)
+    private wristYAtBottom = 0;            // wrist Y at bottom (s3)
+    private wristDisplacementTracked = false;
+    private static readonly MIN_WRIST_DISPLACEMENT_RATIO = 0.10; // wrist must move ≥10% of body ref
+
     constructor(thresholds: BenchThresholds) {
         this.thresholds = thresholds;
     }
@@ -58,6 +64,8 @@ export class BenchPressProcessor implements IExerciseProcessor {
         this.prevState = null; this.currState = null;
         this.prevElbowAngle = 0;
         this.repCount = 0; this.improperRep = 0;
+        this.wristYAtTop = 0; this.wristYAtBottom = 0;
+        this.wristDisplacementTracked = false;
     }
 
     private getState(elbowAngle: number): string | null {
@@ -130,8 +138,22 @@ export class BenchPressProcessor implements IExerciseProcessor {
         this.currState = currentState;
         this.updateStateSequence(currentState);
 
+        // ── Hardening: body reference for proportional checks ──
+        const bodyRefH = Math.max(1, Math.abs(side.shldr.y - side.ankle.y));
+
         // ── Rep counting ──
         if (currentState === "s1") {
+            this.wristYAtTop = wrist.y;
+
+            // ── Hardening: wrist displacement check ──
+            // Verify that wrist actually traveled vertically during the rep
+            if (this.wristDisplacementTracked) {
+                const displacement = Math.abs(this.wristYAtTop - this.wristYAtBottom);
+                if (displacement < BenchPressProcessor.MIN_WRIST_DISPLACEMENT_RATIO * bodyRefH) {
+                    this.incorrectPosture = true; // arms barely moved
+                }
+            }
+
             if (this.stateSeq.length === 3 && !this.incorrectPosture) {
                 this.repCount++;
             } else if (this.stateSeq.includes("s2") && this.stateSeq.length === 1) {
@@ -141,7 +163,14 @@ export class BenchPressProcessor implements IExerciseProcessor {
             }
             this.stateSeq = [];
             this.incorrectPosture = false;
+            this.wristDisplacementTracked = false;
         } else {
+            // Track wrist Y at bottom for displacement check
+            if (currentState === "s3") {
+                this.wristYAtBottom = wrist.y;
+                this.wristDisplacementTracked = true;
+            }
+
             // Partial rep: in transition but never reaching bottom
             if (currentState === "s2" && this.stateSeq.length === 1 && !this.stateSeq.includes("s3")) {
                 // Detect if angles are going back up without touching bottom
@@ -149,9 +178,10 @@ export class BenchPressProcessor implements IExerciseProcessor {
                     this.displayText[0] = true;
                 }
             }
-            // Bar path drift
+            // Bar path drift ── Hardening: normalized against body ref (was raw pixels)
             const barDrift = Math.abs(wrist.x - shldr.x);
-            if (barDrift > this.thresholds.BAR_PATH_THRESH && this.stateSeq.length > 0) {
+            const normalizedDrift = barDrift / bodyRefH;
+            if (normalizedDrift > 0.20 && this.stateSeq.length > 0) {
                 this.displayText[2] = true;
                 this.incorrectPosture = true;
             }

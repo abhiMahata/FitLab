@@ -174,6 +174,7 @@ export function loadRoster(): WeeklyRoster {
 
 export function saveRoster(roster: WeeklyRoster) {
     localStorage.setItem(ROSTER_KEY, JSON.stringify(roster));
+    import("./cloudSync").then(m => m.syncNow()).catch(() => {});
 }
 
 export function loadWorkoutLogs(): WorkoutLog[] {
@@ -186,6 +187,7 @@ export function saveWorkoutLog(log: WorkoutLog) {
     const logs = loadWorkoutLogs();
     logs.unshift(log);
     localStorage.setItem(LOGS_KEY, JSON.stringify(logs.slice(0, 60)));
+    import("./cloudSync").then(m => m.syncNow()).catch(() => {});
 }
 
 export function getTodayLog(): WorkoutLog | null {

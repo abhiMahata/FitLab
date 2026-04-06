@@ -46,6 +46,7 @@ function loadData(): WeekData {
 
 function saveData(data: WeekData) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  import("@/lib/cloudSync").then(m => m.syncNow()).catch(() => {});
 }
 
 // ─── Arc Gauge Component ──────────────────────────────────────────────

@@ -172,6 +172,12 @@ export function getAccuracy(correct: number, incorrect: number): number {
     return Math.round((correct / total) * 100);
 }
 
+/** Get body reference height (shoulder-to-ankle) for normalizing pixel distances.
+ *  All hardcoded pixel thresholds should use this as a denominator to become camera-independent. */
+export function getBodyRefHeight(shoulder: Point, ankle: Point): number {
+    return Math.max(1, Math.abs(shoulder.y - ankle.y));
+}
+
 export function defaultStats(correct = 0, incorrect = 0, feedback: string[] = []): ExerciseStats {
     return {
         correctCount: correct,

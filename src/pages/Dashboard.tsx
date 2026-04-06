@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Dumbbell, Droplet, Sparkles, Plus, Minus, ChevronRight, Zap, Flame } from "lucide-react";
+import { Dumbbell, Droplet, Sparkles, Plus, Minus, ChevronRight, Zap, Flame, Brain, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
@@ -8,6 +8,8 @@ import {
 } from "@/lib/exerciseLibrary";
 import { getStreakDisplay } from "@/lib/streakUtils";
 import { getProfile, getWaterGoalMl } from "@/lib/userProfile";
+import { generateInsights } from "@/lib/insightEngine";
+import { getSyncStatus } from "@/lib/cloudSync";
 
 const BOTTLE_SIZES = [
   { label: "250 ml", ml: 250 },
@@ -61,6 +63,13 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // ── Sync status ──
+  const [syncInfo, setSyncInfo] = useState(getSyncStatus());
+  useEffect(() => {
+    const t = setInterval(() => setSyncInfo(getSyncStatus()), 2000);
+    return () => clearInterval(t);
+  }, []);
+
   // ── Today's day ──
   const today = DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
@@ -99,7 +108,10 @@ const Dashboard = () => {
   // ── Random fun fact ──
   const funFact = useMemo(() => FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)], []);
 
-  // ── Streak data (recomputes when water changes, which is the most frequent activity) ──
+  // ── Cross-feature insights ──
+  const insights = useMemo(() => generateInsights(), [waterMl, todayLog]);
+
+  // ── Streak data ──
   const streak = useMemo(() => getStreakDisplay(), [waterMl, todayLog]);
 
   // ── Greeting ──
@@ -115,13 +127,38 @@ const Dashboard = () => {
             <p className="label-caps mb-1">{today}</p>
             <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate("/ai-form-checker")}
-            className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center glow-green-sm"
-          >
-            <Zap className="w-5 h-5 text-primary-foreground" />
-          </motion.button>
+          <div className="flex items-center gap-2">
+            {/* Sync indicator */}
+            <div
+              title={syncInfo.lastSyncedAt ? `Last synced ${syncInfo.lastSyncedAt.toLocaleTimeString()}` : "Not synced yet"}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                syncInfo.status === "synced" ? "bg-primary/15" :
+                syncInfo.status === "syncing" ? "bg-fitlab-blue/15" :
+                syncInfo.status === "error" ? "bg-destructive/15" :
+                "bg-muted"
+              }`}
+            >
+              {syncInfo.status === "syncing" && (
+                <RefreshCw className="w-4 h-4 text-fitlab-blue animate-spin" />
+              )}
+              {syncInfo.status === "synced" && (
+                <Cloud className="w-4 h-4 text-primary" />
+              )}
+              {syncInfo.status === "error" && (
+                <CloudOff className="w-4 h-4 text-destructive" />
+              )}
+              {syncInfo.status === "idle" && (
+                <Cloud className="w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => navigate("/ai-form-checker")}
+              className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center glow-green-sm"
+            >
+              <Zap className="w-5 h-5 text-primary-foreground" />
+            </motion.button>
+          </div>
         </div>
 
         {/* ═══ Streak Banner ═══ */}
@@ -347,6 +384,55 @@ const Dashboard = () => {
           </div>
         </div>
       </section>
+
+      {/* ═══ Smart Insights ═══ */}
+      {insights.length > 0 && (
+        <section className="px-6 mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-foreground uppercase tracking-wider">Smart Insights</span>
+          </div>
+          <div className="space-y-3">
+            {insights.map((insight, idx) => {
+              const colorMap = {
+                green: "border-primary/30 bg-primary/5",
+                blue: "border-fitlab-blue/30 bg-fitlab-blue/5",
+                orange: "border-fitlab-orange/30 bg-fitlab-orange/5",
+                purple: "border-fitlab-purple/30 bg-fitlab-purple/5",
+                red: "border-destructive/30 bg-destructive/5",
+              };
+              const titleColorMap = {
+                green: "text-primary",
+                blue: "text-fitlab-blue",
+                orange: "text-fitlab-orange",
+                purple: "text-fitlab-purple",
+                red: "text-destructive",
+              };
+              return (
+                <motion.div
+                  key={insight.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className={`rounded-2xl border p-4 ${colorMap[insight.color]}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl flex-shrink-0">{insight.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-bold text-sm ${titleColorMap[insight.color]}`}>
+                        {insight.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        {insight.message}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ═══ Fun Fact Card ═══ */}
       <section className="px-6 mt-6">

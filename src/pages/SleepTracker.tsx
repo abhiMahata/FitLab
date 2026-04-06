@@ -52,6 +52,7 @@ function loadEntries(): SleepEntry[] {
 
 function saveEntries(entries: SleepEntry[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  import("@/lib/cloudSync").then(m => m.syncNow()).catch(() => {});
 }
 
 function formatTime(ts: number): string {

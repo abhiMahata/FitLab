@@ -58,6 +58,12 @@ export class PullupProcessor implements IExerciseProcessor {
     private startInactiveTime = performance.now();
     private inactiveTime = 0;
 
+    // ── Hardening: anti-cheat validation ──
+    private chinAboveBar = false;          // true if nose.y < avg wrist.y during "up"
+    private fullExtensionReached = false;  // true if elbows fully extended at "down"
+    private static readonly MIN_EXTENSION_ANGLE = 150;  // ≥15° for full arm extension
+    private static readonly SWING_SHOULDER_WIDTH_RATIO = 2.0; // max swing = 2x shoulder width
+
     constructor(thresholds: PullupThresholds) {
         this.thresholds = thresholds;
     }
@@ -73,6 +79,8 @@ export class PullupProcessor implements IExerciseProcessor {
         this.countFrames = [0, 0];
         this.startInactiveTime = performance.now();
         this.inactiveTime = 0;
+        this.chinAboveBar = false;
+        this.fullExtensionReached = false;
     }
 
     private getState(elbowAngle: number): string | null {
@@ -135,12 +143,14 @@ export class PullupProcessor implements IExerciseProcessor {
         drawLabel(ctx, `${Math.round(lElbowAngle)}°`, { x: lElbow.x - 50, y: lElbow.y }, "rgba(0,0,0,0.6)", COLORS.lightGreen, 12);
         drawLabel(ctx, `${Math.round(rElbowAngle)}°`, { x: rElbow.x + 15, y: rElbow.y }, "rgba(0,0,0,0.6)", COLORS.lightGreen, 12);
 
-        // Body swing check (horizontal offset between avg shoulder and avg hip)
+        // Body swing check — Hardening: normalize against shoulder width
+        const shoulderWidth = Math.abs(lShldr.x - rShldr.x);
         const avgShldrX = (lShldr.x + rShldr.x) / 2;
         const avgHipX = (lHip.x + rHip.x) / 2;
         const swing = Math.abs(avgShldrX - avgHipX);
+        const maxSwing = shoulderWidth * PullupProcessor.SWING_SHOULDER_WIDTH_RATIO;
 
-        if (swing > this.thresholds.BODY_SWING_THRESH) {
+        if (swing > maxSwing) {
             this.displayText[1] = true;
             this.incorrectPosture = true;
         }
@@ -149,7 +159,22 @@ export class PullupProcessor implements IExerciseProcessor {
         const state = this.getState(avgElbowAngle);
         this.currState = state;
 
-        // Rep counting: down → up = 1 rep
+        // ── Hardening: chin-above-bar verification ──
+        const avgWristY = (lWrist.y + rWrist.y) / 2;
+        if (state === "up" && nose.y < avgWristY) {
+            this.chinAboveBar = true;
+        }
+
+        // ── Hardening: full extension check at bottom ──
+        if (state === "down") {
+            if (avgElbowAngle >= PullupProcessor.MIN_EXTENSION_ANGLE) {
+                this.fullExtensionReached = true;
+            } else {
+                this.displayText[0] = true; // not fully extending
+            }
+        }
+
+        // Rep counting: up → down = 1 rep (starting from extension)
         if (state === "up") {
             if (!this.stateSeq.includes("up")) {
                 this.stateSeq.push("up");
@@ -157,13 +182,18 @@ export class PullupProcessor implements IExerciseProcessor {
         }
 
         if (state === "down") {
-            if (this.stateSeq.includes("up") && !this.incorrectPosture) {
-                this.correctCount++;
-            } else if (this.stateSeq.includes("up") && this.incorrectPosture) {
-                this.incorrectCount++;
+            if (this.stateSeq.includes("up")) {
+                // ── Hardening: require chin above bar for correct rep ──
+                if (!this.incorrectPosture && this.chinAboveBar) {
+                    this.correctCount++;
+                } else {
+                    this.incorrectCount++;
+                }
             }
             this.stateSeq = [];
             this.incorrectPosture = false;
+            this.chinAboveBar = false;
+            this.fullExtensionReached = false;
         }
 
         // Feedback

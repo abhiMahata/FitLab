@@ -1,40 +1,38 @@
 import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft, User, ChevronRight, Clock, Flame, Trophy, Settings, HelpCircle, Camera, Sun, Moon, X, Dumbbell, UtensilsCrossed, ScanEye, BedDouble, Trash2 } from "lucide-react";
+import { ArrowLeft, User, ChevronRight, Clock, Flame, Trophy, Settings, HelpCircle, Camera, Sun, Moon, X, Dumbbell, UtensilsCrossed, ScanEye, BedDouble, Trash2, LogOut, Mail, KeyRound, Download, Target, Ruler, Weight, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
 import { checkBadges } from "@/lib/badgeUtils";
 import { loadWorkoutLogs } from "@/lib/exerciseLibrary";
-import { getProfile as getUserProfile, calculateBMI } from "@/lib/userProfile";
-
-interface ProfileData {
-    name: string;
-    email: string;
-}
+import { getProfile as getUserProfile, saveProfile as saveUserProfile, calculateBMI, type Goal, type FitnessLevel, type UserProfile } from "@/lib/userProfile";
+import { useAuth } from "@/lib/authContext";
+import teamCreditsImg from "@/assets/team_credits.png";
 
 type ThemeMode = "dark" | "light";
 
 const Profile = () => {
     const navigate = useNavigate();
+    const { user, signOut, resetPassword } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
+    const [showAccount, setShowAccount] = useState(false);
+    const [showFitness, setShowFitness] = useState(false);
     const [showGeneral, setShowGeneral] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
+    const [showCredits, setShowCredits] = useState(false);
+    const [passwordResetSent, setPasswordResetSent] = useState(false);
 
-    const [profile, setProfile] = useState<ProfileData>(() => {
-        const saved = localStorage.getItem("fitlab-profile");
-        return saved ? JSON.parse(saved) : { name: "", email: "" };
-    });
-
-    const [editForm, setEditForm] = useState<ProfileData>(profile);
+    // Fitness profile editor state
+    const [editAge, setEditAge] = useState(25);
+    const [editHeight, setEditHeight] = useState(170);
+    const [editWeight, setEditWeight] = useState(70);
+    const [editTargetWeight, setEditTargetWeight] = useState(70);
+    const [editGoal, setEditGoal] = useState<Goal>("Keep Fit");
+    const [editFitnessLevel, setEditFitnessLevel] = useState<FitnessLevel>("Beginner");
 
     const [theme, setTheme] = useState<ThemeMode>(() => {
         return (localStorage.getItem("fitlab-theme") as ThemeMode) || "dark";
     });
-
-    useEffect(() => {
-        localStorage.setItem("fitlab-profile", JSON.stringify(profile));
-    }, [profile]);
 
     // Apply theme to <html>
     useEffect(() => {
@@ -44,9 +42,59 @@ const Profile = () => {
         localStorage.setItem("fitlab-theme", theme);
     }, [theme]);
 
-    const handleSaveProfile = () => {
-        setProfile(editForm);
-        setIsEditing(false);
+    // Load fitness profile into editor when opening
+    const openFitnessEditor = () => {
+        const p = getUserProfile();
+        if (p) {
+            setEditAge(p.age);
+            setEditHeight(p.heightCm);
+            setEditWeight(p.weightKg);
+            setEditTargetWeight(p.targetWeightKg);
+            setEditGoal(p.goal);
+            setEditFitnessLevel(p.fitnessLevel);
+        }
+        setShowFitness(true);
+    };
+
+    const saveFitnessProfile = () => {
+        const existing = getUserProfile();
+        const updated: UserProfile = {
+            gender: existing?.gender || "Male",
+            age: editAge,
+            heightCm: editHeight,
+            weightKg: editWeight,
+            targetWeightKg: editTargetWeight,
+            goal: editGoal,
+            fitnessLevel: editFitnessLevel,
+            completedOnboarding: true,
+        };
+        saveUserProfile(updated);
+        setShowFitness(false);
+    };
+
+    const handleChangePassword = async () => {
+        if (user?.email) {
+            await resetPassword(user.email);
+            setPasswordResetSent(true);
+            setTimeout(() => setPasswordResetSent(false), 4000);
+        }
+    };
+
+    const handleExportData = () => {
+        const data: Record<string, unknown> = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith("fitlab-")) {
+                try { data[key] = JSON.parse(localStorage.getItem(key) || ""); } catch { data[key] = localStorage.getItem(key); }
+            }
+        }
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `fitlab-export-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     // ── Badges ──
@@ -70,11 +118,18 @@ const Profile = () => {
 
     const settingsSections = [
         {
-            label: "Personal",
-            icon: User,
+            label: "Account",
+            icon: Mail,
             iconBg: "bg-primary/15",
             iconColor: "text-primary",
-            action: () => setIsEditing(true),
+            action: () => setShowAccount(true),
+        },
+        {
+            label: "Fitness Profile",
+            icon: Target,
+            iconBg: "bg-fitlab-orange/15",
+            iconColor: "text-fitlab-orange",
+            action: openFitnessEditor,
         },
         {
             label: "General",
@@ -84,10 +139,24 @@ const Profile = () => {
             action: () => setShowGeneral(true),
         },
         {
-            label: "Help",
-            icon: HelpCircle,
+            label: "Export Data",
+            icon: Download,
             iconBg: "bg-fitlab-purple/15",
             iconColor: "text-fitlab-purple",
+            action: handleExportData,
+        },
+        {
+            label: "Team Credits",
+            icon: Users,
+            iconBg: "bg-green-500/15",
+            iconColor: "text-green-500",
+            action: () => setShowCredits(true),
+        },
+        {
+            label: "Help",
+            icon: HelpCircle,
+            iconBg: "bg-muted",
+            iconColor: "text-muted-foreground",
             action: () => setShowHelp(true),
         },
     ];
@@ -155,10 +224,10 @@ const Profile = () => {
 
                 {/* Name & Email */}
                 <h1 className="text-2xl font-bold text-foreground mb-1">
-                    {profile.name || "Your Name"}
+                    {user?.displayName || "Your Name"}
                 </h1>
                 <p className="text-muted-foreground text-sm mb-3">
-                    {profile.email || "email@example.com"}
+                    {user?.email || "email@example.com"}
                 </p>
 
                 {userProfile && (
@@ -288,17 +357,33 @@ const Profile = () => {
                     <Trash2 className="w-5 h-5" />
                     Reset All Data
                 </motion.button>
+
+                {/* Sign Out Button */}
+                <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.45 }}
+                    onClick={async () => {
+                        if (window.confirm("Sign out of your account?")) {
+                            await signOut();
+                        }
+                    }}
+                    className="w-full py-4 rounded-xl border border-muted bg-muted/50 text-foreground font-bold text-base flex items-center justify-center gap-2 hover:bg-muted transition-all mt-3"
+                >
+                    <LogOut className="w-5 h-5" />
+                    Sign Out
+                </motion.button>
             </motion.section>
 
-            {/* Edit Profile Modal */}
+            {/* Account Info Modal */}
             <AnimatePresence>
-                {isEditing && (
+                {showAccount && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => setShowAccount(false)}
                     >
                         <motion.div
                             initial={{ scale: 0.9, y: 30 }}
@@ -307,44 +392,127 @@ const Profile = () => {
                             onClick={(e) => e.stopPropagation()}
                             className="solid-card-lg p-6 w-full max-w-sm"
                         >
-                            <h3 className="text-xl font-bold text-foreground mb-6">Edit Profile</h3>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-foreground">Account</h3>
+                                <button
+                                    onClick={() => setShowAccount(false)}
+                                    className="w-9 h-9 rounded-full bg-muted flex items-center justify-center"
+                                >
+                                    <X className="w-4 h-4 text-foreground" />
+                                </button>
+                            </div>
 
                             <div className="space-y-4 mb-6">
-                                <div>
-                                    <label className="text-sm text-muted-foreground mb-1 block">Name</label>
-                                    <input
-                                        type="text"
-                                        value={editForm.name}
-                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                        placeholder="Enter your name"
-                                        className="w-full bg-muted rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-2 focus:ring-primary transition-all"
-                                    />
+                                <div className="bg-muted rounded-xl p-4">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Email</p>
+                                    <p className="text-foreground font-semibold">{user?.email || "Not signed in"}</p>
                                 </div>
+                                <div className="bg-muted rounded-xl p-4">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Display Name</p>
+                                    <p className="text-foreground font-semibold">{user?.displayName || "Not set"}</p>
+                                </div>
+                                <div className="bg-muted rounded-xl p-4">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Account Created</p>
+                                    <p className="text-foreground font-semibold">
+                                        {user?.metadata?.creationTime
+                                            ? new Date(user.metadata.creationTime).toLocaleDateString()
+                                            : "Unknown"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleChangePassword}
+                                disabled={passwordResetSent}
+                                className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all disabled:opacity-50"
+                            >
+                                <KeyRound className="w-4 h-4" />
+                                {passwordResetSent ? "Reset email sent ✓" : "Change Password"}
+                            </button>
+                            {passwordResetSent && (
+                                <p className="text-xs text-primary text-center mt-2">Check your email for the reset link.</p>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Fitness Profile Editor Modal */}
+            <AnimatePresence>
+                {showFitness && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+                        onClick={() => setShowFitness(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 30 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 30 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="solid-card-lg p-6 w-full max-w-sm max-h-[85vh] overflow-y-auto"
+                        >
+                            <h3 className="text-xl font-bold text-foreground mb-6">Edit Fitness Profile</h3>
+
+                            <div className="space-y-4 mb-6">
+                                {/* Age */}
                                 <div>
-                                    <label className="text-sm text-muted-foreground mb-1 block">Email</label>
-                                    <input
-                                        type="email"
-                                        value={editForm.email}
-                                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                                        placeholder="Enter your email"
-                                        className="w-full bg-muted rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-2 focus:ring-primary transition-all"
-                                    />
+                                    <label className="text-sm text-muted-foreground mb-1 block">Age</label>
+                                    <input type="number" value={editAge} onChange={(e) => setEditAge(Number(e.target.value))}
+                                        className="w-full bg-muted rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                {/* Height */}
+                                <div>
+                                    <label className="text-sm text-muted-foreground mb-1 block">Height (cm)</label>
+                                    <input type="number" value={editHeight} onChange={(e) => setEditHeight(Number(e.target.value))}
+                                        className="w-full bg-muted rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                {/* Weight */}
+                                <div>
+                                    <label className="text-sm text-muted-foreground mb-1 block">Weight (kg)</label>
+                                    <input type="number" value={editWeight} onChange={(e) => setEditWeight(Number(e.target.value))}
+                                        className="w-full bg-muted rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                {/* Target Weight */}
+                                <div>
+                                    <label className="text-sm text-muted-foreground mb-1 block">Target Weight (kg)</label>
+                                    <input type="number" value={editTargetWeight} onChange={(e) => setEditTargetWeight(Number(e.target.value))}
+                                        className="w-full bg-muted rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                {/* Fitness Goal */}
+                                <div>
+                                    <label className="text-sm text-muted-foreground mb-2 block">Fitness Goal</label>
+                                    <div className="space-y-2">
+                                        {(["Lose Weight", "Keep Fit", "Build Muscle"] as Goal[]).map(g => (
+                                            <button key={g} onClick={() => setEditGoal(g)}
+                                                className={`w-full p-3 rounded-xl flex items-center justify-between border-2 transition-all ${editGoal === g ? 'border-primary bg-primary/10' : 'border-transparent bg-muted'}`}>
+                                                <span className={`font-semibold text-sm ${editGoal === g ? "text-primary" : "text-foreground"}`}>{g}</span>
+                                                {editGoal === g && <Target className="w-4 h-4 text-primary" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                {/* Fitness Level */}
+                                <div>
+                                    <label className="text-sm text-muted-foreground mb-2 block">Fitness Level</label>
+                                    <div className="space-y-2">
+                                        {(["Beginner", "Intermediate", "Advanced"] as FitnessLevel[]).map(f => (
+                                            <button key={f} onClick={() => setEditFitnessLevel(f)}
+                                                className={`w-full p-3 rounded-xl flex items-center justify-between border-2 transition-all ${editFitnessLevel === f ? 'border-primary bg-primary/10' : 'border-transparent bg-muted'}`}>
+                                                <span className={`font-semibold text-sm ${editFitnessLevel === f ? "text-primary" : "text-foreground"}`}>{f}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="flex gap-3">
-                                <button
-                                    onClick={() => setIsEditing(false)}
-                                    className="flex-1 py-3 rounded-xl bg-muted text-muted-foreground font-semibold hover:bg-muted/80 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSaveProfile}
-                                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all"
-                                >
-                                    Save
-                                </button>
+                                <button onClick={() => setShowFitness(false)}
+                                    className="flex-1 py-3 rounded-xl bg-muted text-muted-foreground font-semibold">Cancel</button>
+                                <button onClick={saveFitnessProfile}
+                                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-semibold">Save</button>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -481,10 +649,43 @@ const Profile = () => {
 
                                 {/* Version */}
                                 <div className="text-center pt-4 pb-2">
-                                    <p className="text-xs text-muted-foreground/60">FitLab v1.0 • Built with ❤️</p>
+                                    <p className="text-xs text-muted-foreground/60">FitLab v1.2 • Built with ❤️</p>
                                 </div>
                             </div>
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Credits Modal (Full Screen Image Viewer) */}
+            <AnimatePresence>
+                {showCredits && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="fixed inset-0 bg-black z-50 flex flex-col"
+                    >
+                        {/* Header Overlay */}
+                        <div className="absolute top-0 left-0 w-full p-6 flex items-center justify-between z-10 bg-gradient-to-b from-black/80 to-transparent">
+                            <button
+                                onClick={() => setShowCredits(false)}
+                                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/20"
+                            >
+                                <ArrowLeft className="w-5 h-5 text-white" />
+                            </button>
+                            <h3 className="text-white font-bold tracking-wider mr-2 text-sm drop-shadow-md">THE TEAM</h3>
+                            <div className="w-10" />
+                        </div>
+                        
+                        {/* Image Full Size */}
+                        <div className="flex-1 flex items-center justify-center w-full h-full overflow-hidden bg-black">
+                            <img 
+                                src={teamCreditsImg} 
+                                alt="Team" 
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

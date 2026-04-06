@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ArrowLeft, Plus, Trash2, Play, ChevronRight, Search, X,
-  Timer, CheckCircle2, Dumbbell, ChevronDown, Weight,
+  Timer, CheckCircle2, Dumbbell, ChevronDown, Weight, Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,8 @@ import {
   RosterExercise, WeeklyRoster, DayRoster, WorkoutLog,
   DAYS_OF_WEEK, loadRoster, saveRoster, saveWorkoutLog,
 } from "@/lib/exerciseLibrary";
+import { getProfile } from "@/lib/userProfile";
+import { getTemplateForGoal } from "@/lib/workoutTemplates";
 
 type PageView = "roster" | "browse" | "workout";
 
@@ -312,6 +314,42 @@ const WorkoutRoster = () => {
                   className="flex-1 bg-transparent text-primary font-semibold text-sm placeholder:text-muted-foreground/40 outline-none border-b border-transparent focus:border-primary transition-all"
                 />
               </div>
+            </section>
+
+            {/* Quick Start Template Banner */}
+            <section className="px-6 mb-4">
+              {(() => {
+                const profile = getProfile();
+                if (!profile?.goal) return null;
+                const tmpl = getTemplateForGoal(profile.goal);
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl border border-primary/30 bg-primary/5 p-4"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-foreground text-sm">{tmpl.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{tmpl.description}</p>
+                        <p className="text-xs text-primary mt-1">Goal: {profile.goal}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setRoster(tmpl.roster);
+                      }}
+                      className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Load This Plan
+                    </button>
+                  </motion.div>
+                );
+              })()}
             </section>
 
             {/* Exercise List */}

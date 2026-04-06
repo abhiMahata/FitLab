@@ -37,6 +37,9 @@ export class OHPProcessor implements IExerciseProcessor {
     public repCount = 0;
     public improperRep = 0;
 
+    // ── Hardening: anti-cheat validation ──
+    private lockoutValidated = false;  // wrist must be above shoulder at lockout
+
     constructor(thresholds: OHPThresholds) {
         this.thresholds = thresholds;
     }
@@ -58,6 +61,7 @@ export class OHPProcessor implements IExerciseProcessor {
         this.incorrectPosture = false;
         this.prevState = null; this.currState = null;
         this.repCount = 0; this.improperRep = 0;
+        this.lockoutValidated = false;
     }
 
     private getState(elbowAngle: number): string | null {
@@ -134,6 +138,11 @@ export class OHPProcessor implements IExerciseProcessor {
 
         // ── Rep counting ──
         if (currentState === "s1") {
+            // ── Hardening: if we had a rep sequence but lockout was never validated ──
+            if (this.stateSeq.length >= 2 && !this.lockoutValidated) {
+                this.incorrectPosture = true;
+            }
+
             if (this.stateSeq.length === 3 && !this.incorrectPosture) {
                 this.repCount++;
             } else if (this.stateSeq.includes("s2") && this.stateSeq.length === 1) {
@@ -144,7 +153,14 @@ export class OHPProcessor implements IExerciseProcessor {
             this.stateSeq = [];
             this.incorrectPosture = false;
             this.leanDetected = false;
+            this.lockoutValidated = false;
         } else {
+            // ── Hardening: wrist-above-shoulder check at lockout ──
+            // At s3 (lockout), wrist must be at or above shoulder level
+            if (currentState === "s3" && wrist.y < shldr.y) {
+                this.lockoutValidated = true;
+            }
+
             // Back lean check
             if (torsoLean > this.thresholds.BACK_LEAN_THRESH[1]) {
                 this.displayText[0] = true;

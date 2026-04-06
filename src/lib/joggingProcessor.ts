@@ -27,7 +27,7 @@ export interface JoggingThresholds {
 
 export function getJoggingBeginner(): JoggingThresholds {
     return {
-        KNEE_LIFT_ANGLE: 160,
+        KNEE_LIFT_ANGLE: 145,
         MIN_LIFT_Y_RATIO: 0.08,
         POSTURE_LEAN_THRESH: 60,
         INACTIVE_THRESH: 20,
@@ -130,11 +130,13 @@ export class JoggingProcessor implements IExerciseProcessor {
         drawLabel(ctx, `${Math.round(lKneeAngle)}°`, { x: lKnee.x - 50, y: lKnee.y }, "rgba(0,0,0,0.6)", COLORS.lightGreen, 12);
         drawLabel(ctx, `${Math.round(rKneeAngle)}°`, { x: rKnee.x + 15, y: rKnee.y }, "rgba(0,0,0,0.6)", COLORS.lightGreen, 12);
 
-        // Posture check — lean angle (nose to midpoint of hips)
+        // Posture check — Hardening: normalize against shoulder width
         const midHipX = (lHip.x + rHip.x) / 2;
         const midHipY = (lHip.y + rHip.y) / 2;
+        const shoulderWidth = Math.abs(lShldr.x - rShldr.x);
         const lean = Math.abs(nose.x - midHipX);
-        if (lean > this.thresholds.POSTURE_LEAN_THRESH * 2) {
+        const maxLeanPx = Math.max(shoulderWidth * 1.5, 30); // proportional, with minimum floor
+        if (lean > maxLeanPx) {
             this.displayText[1] = true;
         }
 
@@ -150,34 +152,38 @@ export class JoggingProcessor implements IExerciseProcessor {
         let currentState = "idle";
 
         // Left knee lift
-        if (lLifted && this.leftDown && this.lastLifted !== "left") {
+        // ── Hardening: require BOTH angle AND lift ratio for a valid step ──
+        if (lLifted && lLiftRatio >= this.thresholds.MIN_LIFT_Y_RATIO && this.leftDown && this.lastLifted !== "left") {
             this.leftDown = false;
             this.lastLifted = "left";
             currentState = "left_up";
-
-            if (lLiftRatio >= this.thresholds.MIN_LIFT_Y_RATIO) {
-                this.correctCount++;
-            } else {
-                this.incorrectCount++;
-                this.displayText[0] = true;
-            }
+            this.correctCount++;
+        } else if (lLifted && this.leftDown && this.lastLifted !== "left") {
+            // Angle passed but lift ratio too low
+            this.leftDown = false;
+            this.lastLifted = "left";
+            currentState = "left_up";
+            this.incorrectCount++;
+            this.displayText[0] = true;
         }
         if (!lLifted) {
             this.leftDown = true;
         }
 
         // Right knee lift
-        if (rLifted && this.rightDown && this.lastLifted !== "right") {
+        // ── Hardening: require BOTH angle AND lift ratio for a valid step ──
+        if (rLifted && rLiftRatio >= this.thresholds.MIN_LIFT_Y_RATIO && this.rightDown && this.lastLifted !== "right") {
             this.rightDown = false;
             this.lastLifted = "right";
             currentState = "right_up";
-
-            if (rLiftRatio >= this.thresholds.MIN_LIFT_Y_RATIO) {
-                this.correctCount++;
-            } else {
-                this.incorrectCount++;
-                this.displayText[0] = true;
-            }
+            this.correctCount++;
+        } else if (rLifted && this.rightDown && this.lastLifted !== "right") {
+            // Angle passed but lift ratio too low
+            this.rightDown = false;
+            this.lastLifted = "right";
+            currentState = "right_up";
+            this.incorrectCount++;
+            this.displayText[0] = true;
         }
         if (!rLifted) {
             this.rightDown = true;

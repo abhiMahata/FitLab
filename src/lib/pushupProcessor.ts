@@ -61,6 +61,12 @@ export class PushupProcessor implements IExerciseProcessor {
     private startInactiveTime = performance.now();
     private inactiveTime = 0;
 
+    // ── Hardening: anti-cheat validation ──
+    private bottomFrames = 0;       // frames spent in "down" state
+    private bottomConfirmed = false; // true if held "down" for min frames
+    private static readonly MIN_BOTTOM_FRAMES = 2;
+    private static readonly MAX_VERTICAL_RATIO = 0.60; // body must be <60% vertical span vs horizontal
+
     constructor(thresholds: PushupThresholds) {
         this.thresholds = thresholds;
     }
@@ -76,6 +82,8 @@ export class PushupProcessor implements IExerciseProcessor {
         this.countFrames = [0, 0];
         this.startInactiveTime = performance.now();
         this.inactiveTime = 0;
+        this.bottomFrames = 0;
+        this.bottomConfirmed = false;
     }
 
     private getState(elbowAngle: number): string | null {
@@ -138,24 +146,45 @@ export class PushupProcessor implements IExerciseProcessor {
         const lineColor = bodyAngle >= minAlign && bodyAngle <= maxAlign ? COLORS.green : COLORS.red;
         drawLine(ctx, side.shldr, side.ankle, lineColor, 2);
 
+        // ── Hardening: body orientation check ──
+        // In a real push-up, the body is roughly horizontal.
+        // If vertical span (shoulder-ankle Y diff) >> horizontal span, user is standing.
+        const verticalSpan = Math.abs(side.shldr.y - side.ankle.y);
+        const horizontalSpan = Math.abs(side.shldr.x - side.ankle.x);
+        if (horizontalSpan > 0 && verticalSpan / horizontalSpan > PushupProcessor.MAX_VERTICAL_RATIO) {
+            // Body is too upright for a push-up (likely standing / wall push-up)
+            this.incorrectPosture = true;
+        }
+
         // State machine
         const state = this.getState(elbowAngle);
         this.currState = state;
 
+        // ── Hardening: track bottom hold ──
         if (state === "down") {
+            this.bottomFrames++;
+            if (this.bottomFrames >= PushupProcessor.MIN_BOTTOM_FRAMES) {
+                this.bottomConfirmed = true;
+            }
             if (!this.stateSeq.includes("down")) {
                 this.stateSeq.push("down");
+            }
+        } else {
+            if (state !== "down") {
+                this.bottomFrames = 0;
             }
         }
 
         if (state === "up") {
-            if (this.stateSeq.includes("down") && !this.incorrectPosture) {
+            if (this.stateSeq.includes("down") && this.bottomConfirmed && !this.incorrectPosture) {
                 this.correctCount++;
-            } else if (this.stateSeq.includes("down") && this.incorrectPosture) {
+            } else if (this.stateSeq.includes("down") && (this.incorrectPosture || !this.bottomConfirmed)) {
                 this.incorrectCount++;
             }
             this.stateSeq = [];
             this.incorrectPosture = false;
+            this.bottomConfirmed = false;
+            this.bottomFrames = 0;
         }
 
         // Feedback display

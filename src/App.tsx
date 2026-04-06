@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import SplashScreen from "./components/SplashScreen";
 import BadgeNotifier from "./components/BadgeNotifier";
 import Dashboard from "./pages/Dashboard";
@@ -13,36 +13,65 @@ import SleepTracker from "./pages/SleepTracker";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
+import Login from "./pages/Login";
 import { getProfile } from "./lib/userProfile";
+import { AuthProvider, useAuth } from "./lib/authContext";
+import { trackEvent } from "./lib/firebase";
 
-const App = () => {
+/** Tracks page views whenever the route changes */
+function PageTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackEvent("page_view", { page_path: location.pathname });
+  }, [location.pathname]);
+  return null;
+}
+
+/** Inner app — has access to useAuth() */
+const AppContent = () => {
+  const { user, loading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
   const [hasOnboarded, setHasOnboarded] = useState<boolean>(() => {
     const p = getProfile();
     return p ? p.completedOnboarding : false;
   });
 
-  if (!showSplash && !hasOnboarded) {
+  // Show splash first
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
+
+  // Auth loading state
+  if (loading) {
     return (
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="*" element={<Onboarding onComplete={() => setHasOnboarded(true)} />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 
+  // Not logged in → show Login page
+  if (!user) {
+    return <Login />;
+  }
+
+  // Logged in but hasn't completed onboarding → show Onboarding
+  if (!hasOnboarded) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="*" element={<Onboarding onComplete={() => setHasOnboarded(true)} />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
+  // Fully authenticated + onboarded → main app
   return (
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+    <>
       <BadgeNotifier />
       <BrowserRouter>
+        <PageTracker />
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/workout-roster" element={<WorkoutRoster />} />
@@ -53,7 +82,19 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-    </TooltipProvider>
+    </>
+  );
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </TooltipProvider>
+    </AuthProvider>
   );
 };
 

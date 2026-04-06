@@ -37,6 +37,12 @@ export class LungeProcessor implements IExerciseProcessor {
     public repCount = 0;
     public improperRep = 0;
 
+    // ── Hardening: anti-cheat validation ──
+    private standingHipY = 0;          // hip Y when standing (s1)
+    private hipDropValidated = false;  // true if hips dropped enough
+    private static readonly MIN_HIP_DROP_RATIO = 0.10;  // hips must drop ≥10% of body height
+    private static readonly KNEE_TOE_RATIO = 0.12;      // knee-over-toe max = 12% of body height
+
     constructor(thresholds: LungeThresholds) {
         this.thresholds = thresholds;
     }
@@ -58,6 +64,8 @@ export class LungeProcessor implements IExerciseProcessor {
         this.incorrectPosture = false;
         this.prevState = null; this.currState = null;
         this.repCount = 0; this.improperRep = 0;
+        this.standingHipY = 0;
+        this.hipDropValidated = false;
     }
 
     private getState(kneeVertAngle: number): string | null {
@@ -134,8 +142,15 @@ export class LungeProcessor implements IExerciseProcessor {
         this.currState = currentState;
         this.updateStateSequence(currentState);
 
+        // ── Hardening: body reference height for proportional checks ──
+        const bodyRefH = Math.max(1, Math.abs(shldr.y - side.ankle.y));
+
         // ── Rep counting ──
         if (currentState === "s1") {
+            // Store standing hip Y for drop validation
+            this.standingHipY = hip.y;
+            this.hipDropValidated = false;
+
             if (this.stateSeq.length === 3 && !this.incorrectPosture) {
                 this.repCount++;
             } else if (this.stateSeq.includes("s2") && this.stateSeq.length === 1) {
@@ -146,10 +161,24 @@ export class LungeProcessor implements IExerciseProcessor {
             this.stateSeq = [];
             this.incorrectPosture = false;
         } else {
-            // Knee over toe check — knee x-position past ankle
+            // ── Hardening: hip-drop validation ──
+            if (this.standingHipY > 0 && (currentState === "s2" || currentState === "s3")) {
+                const hipDrop = hip.y - this.standingHipY;
+                if (hipDrop > LungeProcessor.MIN_HIP_DROP_RATIO * bodyRefH) {
+                    this.hipDropValidated = true;
+                }
+            }
+
+            // Knee over toe check — Hardening: normalized against body ref (was raw pixels)
             const kneeOverToe = Math.abs(knee.x - ankle.x);
-            if (knee.y > ankle.y - 10 && kneeOverToe > this.thresholds.KNEE_OVER_TOE_THRESH) {
+            const normalizedKOT = kneeOverToe / bodyRefH;
+            if (knee.y > ankle.y - 10 && normalizedKOT > LungeProcessor.KNEE_TOE_RATIO) {
                 this.displayText[0] = true;
+                this.incorrectPosture = true;
+            }
+
+            // ── Hardening: if bottom reached but hips didn't drop ──
+            if (currentState === "s3" && !this.hipDropValidated) {
                 this.incorrectPosture = true;
             }
             // Torso lean check

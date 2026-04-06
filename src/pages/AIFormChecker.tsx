@@ -41,8 +41,7 @@ function createProcessor(exercise: string, mode: "Beginner" | "Pro"): IExerciseP
   }
 }
 
-/** Exercises that support front-view analysis */
-const FRONT_VIEW_EXERCISES = ["Squat"];
+/** All exercises now support side/front view toggle */
 
 const exercises = [
   { name: "Squat", category: "Lower Body", iconType: "squat" },
@@ -481,8 +480,8 @@ const AIFormChecker = () => {
                     <SwitchCamera className="w-5 h-5 text-white" />
                   </button>
 
-                  {/* Side/Front toggle — only for supported exercises */}
-                  {selectedExercise && FRONT_VIEW_EXERCISES.includes(selectedExercise) && (
+                  {/* Side/Front toggle — available for all exercises */}
+                  {selectedExercise && (
                     <button
                       onClick={handleToggleCameraView}
                       className={`h-13 px-4 rounded-xl flex items-center justify-center gap-2 border transition-colors ${cameraView === "front"

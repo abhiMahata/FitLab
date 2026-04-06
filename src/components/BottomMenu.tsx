@@ -209,6 +209,7 @@ const BottomMenu = ({ isOpen, onToggle }: BottomMenuProps) => {
           height: `${sheetHeight}px`,
           transform: `translateY(${sheetHeight - HANDLE_HEIGHT}px)`,
           touchAction: "none",
+          paddingBottom: "env(safe-area-inset-bottom)",
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}

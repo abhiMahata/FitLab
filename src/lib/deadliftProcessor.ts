@@ -36,6 +36,11 @@ export class DeadliftProcessor implements IExerciseProcessor {
     public repCount = 0;
     public improperRep = 0;
 
+    // ── Hardening: anti-cheat validation ──
+    private static readonly MIN_KNEE_BEND = 15;        // knees must bend ≥15° during lift
+    private static readonly MAX_LOCKOUT_HIP_ANGLE = 15; // hip angle must be <15° at lockout
+    private static readonly BAR_DRIFT_RATIO = 0.15;    // bar drift max = 15% of body height
+
     constructor(thresholds: DeadliftThresholds) {
         this.thresholds = thresholds;
     }
@@ -139,6 +144,12 @@ export class DeadliftProcessor implements IExerciseProcessor {
 
         // ── Rep counting ──
         if (currentState === "s1") {
+            // ── Hardening: lockout validation ──
+            // At s1, hip must be nearly vertical (fully standing)
+            if (hipVertAngle > DeadliftProcessor.MAX_LOCKOUT_HIP_ANGLE && this.stateSeq.length >= 2) {
+                this.incorrectPosture = true;
+            }
+
             if (this.stateSeq.length === 3 && !this.incorrectPosture) {
                 this.repCount++;
             } else if (this.stateSeq.includes("s2") && this.stateSeq.length === 1) {
@@ -158,9 +169,20 @@ export class DeadliftProcessor implements IExerciseProcessor {
             if (kneeVertAngle > this.thresholds.KNEE_THRESH && this.stateSeq.includes("s2")) {
                 this.displayText[1] = true;
             }
+
+            // ── Hardening: concurrent knee-bend check ──
+            // A real deadlift involves knee bend. If knees are locked straight
+            // (pure waist bow), it's not a deadlift.
+            if (this.stateSeq.includes("s2") && kneeVertAngle < DeadliftProcessor.MIN_KNEE_BEND) {
+                this.incorrectPosture = true;
+            }
+
             // Form feedback: bar drifting (wrist far from ankle)
+            // ── Hardening: normalized bar drift (was hardcoded 60px) ──
+            const bodyRefH = Math.max(1, Math.abs(side.shldr.y - side.ankle.y));
             const barDrift = Math.abs(side.wrist.x - side.ankle.x);
-            if (barDrift > 60 && this.stateSeq.includes("s2")) {
+            const normalizedDrift = barDrift / bodyRefH;
+            if (normalizedDrift > DeadliftProcessor.BAR_DRIFT_RATIO && this.stateSeq.includes("s2")) {
                 this.displayText[2] = true;
                 this.incorrectPosture = true;
             }

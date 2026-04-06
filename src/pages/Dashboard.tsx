@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { Dumbbell, Droplet, Sparkles, Plus, Minus, ChevronRight, Zap } from "lucide-react";
+import { Dumbbell, Droplet, Sparkles, Plus, Minus, ChevronRight, Zap, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
 import {
   DAYS_OF_WEEK, loadRoster, getExerciseById, getTodayLog,
 } from "@/lib/exerciseLibrary";
+import { getStreakDisplay } from "@/lib/streakUtils";
+import { getProfile, getWaterGoalMl } from "@/lib/userProfile";
 
 const BOTTLE_SIZES = [
   { label: "250 ml", ml: 250 },
@@ -90,11 +92,15 @@ const Dashboard = () => {
     setWaterMl((prev) => Math.max(0, prev - BOTTLE_SIZES[selectedBottle].ml));
 
   const waterLiters = (waterMl / 1000).toFixed(1);
-  const waterGoal = 3000;
+  const profile = import.meta.env ? getProfile() : null; // Safe to call here
+  const waterGoal = profile ? getWaterGoalMl(profile) : 3000;
   const waterProgress = Math.min(100, Math.round((waterMl / waterGoal) * 100));
 
   // ── Random fun fact ──
   const funFact = useMemo(() => FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)], []);
+
+  // ── Streak data (recomputes when water changes, which is the most frequent activity) ──
+  const streak = useMemo(() => getStreakDisplay(), [waterMl, todayLog]);
 
   // ── Greeting ──
   const hour = new Date().getHours();
@@ -104,7 +110,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background pb-32">
       {/* ═══ Header ═══ */}
       <header className="pt-10 pb-8 px-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <p className="label-caps mb-1">{today}</p>
             <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
@@ -117,6 +123,68 @@ const Dashboard = () => {
             <Zap className="w-5 h-5 text-primary-foreground" />
           </motion.button>
         </div>
+
+        {/* ═══ Streak Banner ═══ */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex items-center gap-3 mb-5 solid-card p-3.5 overflow-hidden relative"
+        >
+          {/* Animated flame icon */}
+          <motion.div
+            animate={streak.count > 0 ? {
+              scale: [1, 1.15, 1],
+              rotate: [0, -5, 5, 0],
+            } : {}}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              streak.count > 0
+                ? "bg-fitlab-orange/20"
+                : "bg-muted"
+            }`}
+          >
+            <Flame className={`w-5 h-5 ${
+              streak.count > 0 ? "text-fitlab-orange" : "text-muted-foreground"
+            }`} />
+          </motion.div>
+
+          {/* Streak info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className={`text-2xl stat-number ${
+                streak.count > 0 ? "text-foreground" : "text-muted-foreground"
+              }`}>
+                {streak.count}
+              </span>
+              <span className="text-sm font-semibold text-muted-foreground">
+                day{streak.count !== 1 ? "s" : ""} streak
+              </span>
+            </div>
+            <p className={`text-xs font-medium truncate ${
+              streak.count > 0 ? "text-fitlab-orange" : "text-muted-foreground/60"
+            }`}>
+              {streak.message}
+            </p>
+          </div>
+
+          {/* Today's status indicator */}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold flex-shrink-0 ${
+            streak.isActive
+              ? "bg-primary/15 text-primary"
+              : "bg-muted text-muted-foreground"
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${
+              streak.isActive ? "bg-primary" : "bg-muted-foreground/40"
+            }`} />
+            {streak.isActive ? "Active" : "Pending"}
+          </div>
+
+          {/* Subtle glow effect when streak is active */}
+          {streak.count >= 7 && (
+            <div className="absolute inset-0 bg-gradient-to-r from-fitlab-orange/5 via-transparent to-fitlab-orange/5 pointer-events-none" />
+          )}
+        </motion.div>
 
         {/* Quick stats row */}
         <div className="flex gap-3">

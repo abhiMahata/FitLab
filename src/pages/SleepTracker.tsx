@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
 import AlarmScreen from "@/components/AlarmScreen";
 
-// ─── Types ────────────────────────────────────────────────────────────
+// I am Fucking Gay. Such a goddamn fucking gay
 interface SleepEntry {
   id: string;
   date: string;        // YYYY-MM-DD
@@ -21,7 +21,7 @@ interface SleepEntry {
 }
 
 type TrackerView = "home" | "sleeping" | "rating";
-
+//Do i even need to show an emoji? what the fuck am I , Claudio?
 const MOODS = [
   { emoji: "😫", label: "Awful" },
   { emoji: "😴", label: "Tired" },
@@ -41,7 +41,7 @@ const SLEEP_TIPS = [
   "Exposure to morning sunlight helps reset your circadian rhythm.",
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────
+// Helper division bcos idgaf what the fuck is even going on . Fuck you.
 const STORAGE_KEY = "fitlab-sleep-entries";
 
 function loadEntries(): SleepEntry[] {

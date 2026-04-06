@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, Trash2, Flame, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
+import { getProfile, calculateTDEE } from "@/lib/userProfile";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -29,7 +30,6 @@ const MEALS: { type: MealType; emoji: string; timeHint: string }[] = [
 ];
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
-const CALORIE_GOAL = 2400;
 const STORAGE_KEY = "fitlab-calorie-data";
 
 // ─── Storage ──────────────────────────────────────────────────────────
@@ -129,6 +129,9 @@ const CalorieTracker = () => {
   const [addMeal, setAddMeal] = useState<MealType>("Breakfast");
   const [addName, setAddName] = useState("");
   const [addCalories, setAddCalories] = useState("");
+
+  const profile = getProfile();
+  const CALORIE_GOAL = calculateTDEE(profile);
 
   // Persist
   useEffect(() => { saveData(weekData); }, [weekData]);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ArrowLeft, Plus, Trash2, Play, ChevronRight, Search, X,
-  Timer, CheckCircle2, Dumbbell, ChevronDown,
+  Timer, CheckCircle2, Dumbbell, ChevronDown, Weight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -123,6 +123,7 @@ const WorkoutRoster = () => {
         exerciseId,
         sets: ex.defaultSets,
         reps: ex.defaultReps,
+        weight: 0,
         restSeconds: 60,
       }];
       return {
@@ -150,13 +151,13 @@ const WorkoutRoster = () => {
     });
   }, []);
 
-  const updateExercise = useCallback((day: string, exerciseId: string, field: "sets" | "reps" | "restSeconds", value: number) => {
+  const updateExercise = useCallback((day: string, exerciseId: string, field: "sets" | "reps" | "weight" | "restSeconds", value: number) => {
     setRoster((prev) => ({
       ...prev,
       [day]: {
         ...prev[day],
         exercises: prev[day].exercises.map((e) =>
-          e.exerciseId === exerciseId ? { ...e, [field]: Math.max(1, value) } : e
+          e.exerciseId === exerciseId ? { ...e, [field]: Math.max(0, value) } : e
         ),
       },
     }));
@@ -235,6 +236,7 @@ const WorkoutRoster = () => {
         exerciseId: e.exerciseId,
         setsCompleted: completed[e.exerciseId] || 0,
         totalSets: e.sets,
+        weight: e.weight ?? 0,
       })),
       durationSeconds: Math.floor((Date.now() - workoutStartTime) / 1000),
       completedAt: Date.now(),
@@ -359,20 +361,21 @@ const WorkoutRoster = () => {
                               </div>
                               <div className="flex gap-2">
                                 {[
-                                  { label: "Sets", field: "sets" as const, value: rosterEx.sets },
-                                  { label: "Reps", field: "reps" as const, value: rosterEx.reps },
-                                  { label: "Rest(s)", field: "restSeconds" as const, value: rosterEx.restSeconds },
+                                  { label: "Sets", field: "sets" as const, value: rosterEx.sets, step: 1 },
+                                  { label: "Reps", field: "reps" as const, value: rosterEx.reps, step: 1 },
+                                  { label: "Kg", field: "weight" as const, value: rosterEx.weight ?? 0, step: 2.5 },
+                                  { label: "Rest(s)", field: "restSeconds" as const, value: rosterEx.restSeconds, step: 15 },
                                 ].map((ctrl) => (
                                   <div key={ctrl.label} className="flex-1">
                                     <p className="text-[10px] text-muted-foreground uppercase mb-1">{ctrl.label}</p>
                                     <div className="flex items-center gap-1">
                                       <button
-                                        onClick={() => updateExercise(selectedDay, rosterEx.exerciseId, ctrl.field, ctrl.value - 1)}
+                                        onClick={() => updateExercise(selectedDay, rosterEx.exerciseId, ctrl.field, ctrl.value - ctrl.step)}
                                         className="w-7 h-7 rounded-lg bg-muted text-muted-foreground text-sm flex items-center justify-center hover:bg-primary/20 hover:text-primary"
                                       >−</button>
                                       <span className="flex-1 text-center font-bold text-foreground text-sm">{ctrl.value}</span>
                                       <button
-                                        onClick={() => updateExercise(selectedDay, rosterEx.exerciseId, ctrl.field, ctrl.value + 1)}
+                                        onClick={() => updateExercise(selectedDay, rosterEx.exerciseId, ctrl.field, ctrl.value + ctrl.step)}
                                         className="w-7 h-7 rounded-lg bg-muted text-muted-foreground text-sm flex items-center justify-center hover:bg-primary/20 hover:text-primary"
                                       >+</button>
                                     </div>
@@ -591,7 +594,14 @@ const WorkoutRoster = () => {
                         <p className="text-foreground font-semibold">
                           Set {currentSet} of {currRosterEx.sets}
                         </p>
-                        <p className="text-primary font-bold">{currRosterEx.reps} reps</p>
+                        <div className="flex items-center gap-3">
+                          {(currRosterEx.weight ?? 0) > 0 && (
+                            <span className="text-sm font-bold text-fitlab-blue">
+                              {currRosterEx.weight} kg
+                            </span>
+                          )}
+                          <p className="text-primary font-bold">{currRosterEx.reps} reps</p>
+                        </div>
                       </div>
 
                       {/* Set indicators */}
@@ -645,10 +655,12 @@ const WorkoutRoster = () => {
                         const e = getExerciseById(re.exerciseId);
                         if (!e) return null;
                         return (
-                          <div key={re.exerciseId} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/30">
+                        <div key={re.exerciseId} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/30">
                             <span className="text-lg">{e.emoji}</span>
                             <span className="text-sm text-muted-foreground">{e.name}</span>
-                            <span className="ml-auto text-xs text-muted-foreground">{re.sets}×{re.reps}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {(re.weight ?? 0) > 0 ? `${re.weight}kg · ` : ""}{re.sets}×{re.reps}
+                            </span>
                           </div>
                         );
                       })}

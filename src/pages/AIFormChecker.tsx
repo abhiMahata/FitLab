@@ -6,6 +6,7 @@ import ExerciseCard from "@/components/ExerciseCard";
 import BottomMenu from "@/components/BottomMenu";
 import { usePoseLandmarker } from "@/hooks/usePoseLandmarker";
 import { type ExerciseStats, type IExerciseProcessor, type CameraView } from "@/lib/poseUtils";
+import { saveFormSession } from "@/lib/formSessionUtils";
 import { SquatProcessor } from "@/lib/squatProcessor";
 import { DeadliftProcessor } from "@/lib/deadliftProcessor";
 import { BenchPressProcessor } from "@/lib/benchProcessor";
@@ -84,6 +85,7 @@ const AIFormChecker = () => {
     createProcessor("Squat", "Beginner")
   );
   const lastTimestampRef = useRef<number>(-1);
+  const sessionStartRef = useRef<number>(0);
 
   const { landmarker, isLoading: isModelLoading, error: modelError } = usePoseLandmarker();
 
@@ -98,6 +100,7 @@ const AIFormChecker = () => {
     setSelectedExercise(name);
     processorRef.current = createProcessor(name, mode);
     setCameraView("side"); // reset view on exercise change
+    sessionStartRef.current = Date.now();
     setTimeout(() => setShowCamera(true), 300);
   };
 
@@ -229,6 +232,20 @@ const AIFormChecker = () => {
 
   const handleBack = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+
+    // Save session if there were reps
+    const totalReps = stats.correctCount + stats.incorrectCount;
+    if (selectedExercise && totalReps > 0) {
+      const duration = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+      saveFormSession({
+        exercise: selectedExercise,
+        correctReps: stats.correctCount,
+        incorrectReps: stats.incorrectCount,
+        accuracy: stats.formAccuracy,
+        durationSeconds: duration,
+      });
+    }
+
     setShowCamera(false);
     setSelectedExercise(null);
     handleReset();

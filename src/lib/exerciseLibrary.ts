@@ -127,6 +127,7 @@ export interface RosterExercise {
     exerciseId: string;
     sets: number;
     reps: number;
+    weight: number;       // kg — 0 for bodyweight
     restSeconds: number;
 }
 
@@ -146,7 +147,7 @@ export interface WorkoutLog {
     id: string;
     date: string;
     day: string;
-    exercises: { exerciseId: string; setsCompleted: number; totalSets: number }[];
+    exercises: { exerciseId: string; setsCompleted: number; totalSets: number; weight: number }[];
     durationSeconds: number;
     completedAt: number;
 }

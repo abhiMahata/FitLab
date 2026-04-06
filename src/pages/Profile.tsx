@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, User, ChevronRight, Clock, Flame, Trophy, Settings, HelpCircle, Camera, Sun, Moon, X, Dumbbell, UtensilsCrossed, ScanEye, BedDouble } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, User, ChevronRight, Clock, Flame, Trophy, Settings, HelpCircle, Camera, Sun, Moon, X, Dumbbell, UtensilsCrossed, ScanEye, BedDouble, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
+import { checkBadges } from "@/lib/badgeUtils";
+import { loadWorkoutLogs } from "@/lib/exerciseLibrary";
+import { getProfile as getUserProfile, calculateBMI } from "@/lib/userProfile";
 
 interface ProfileData {
     name: string;
@@ -45,6 +48,25 @@ const Profile = () => {
         setProfile(editForm);
         setIsEditing(false);
     };
+
+    // ── Badges ──
+    const badges = useMemo(() => checkBadges(), []);
+    const unlockedCount = badges.filter((b) => b.unlocked).length;
+
+    // ── Real stats from workout logs ──
+    const workoutStats = useMemo(() => {
+        const logs = loadWorkoutLogs();
+        const totalWorkouts = logs.length;
+        const totalSeconds = logs.reduce((sum, l) => sum + (l.durationSeconds || 0), 0);
+        const hours = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        // Rough calorie estimate: ~5 cal per minute of exercise
+        const calories = Math.round((totalSeconds / 60) * 5);
+        return { totalWorkouts, timeLabel: `${hours}h ${mins}m`, calories };
+    }, []);
+
+    const userProfile = getUserProfile();
+    const bmi = calculateBMI(userProfile);
 
     const settingsSections = [
         {
@@ -135,9 +157,16 @@ const Profile = () => {
                 <h1 className="text-2xl font-bold text-foreground mb-1">
                     {profile.name || "Your Name"}
                 </h1>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm mb-3">
                     {profile.email || "email@example.com"}
                 </p>
+
+                {userProfile && (
+                     <div className="flex items-center gap-2">
+                         <span className="px-2 py-1.5 rounded-md bg-primary/15 text-primary text-xs font-bold uppercase tracking-wider">{userProfile.goal}</span>
+                         <span className="px-2 py-1.5 rounded-md bg-muted border border-border text-foreground text-xs font-bold">BMI: {bmi}</span>
+                     </div>
+                )}
             </motion.section>
 
             {/* Stats Row */}
@@ -147,30 +176,65 @@ const Profile = () => {
                 transition={{ delay: 0.1 }}
                 className="px-6 mb-8"
             >
-                <div className="solid-card-lg p-5 flex items-center justify-around">
-                    <div className="flex flex-col items-center">
-                        <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center mb-2">
+                <div className="solid-card-lg p-5 flex items-center justify-between">
+                    <div className="flex-1 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center mx-auto mb-2">
                             <Clock className="w-5 h-5 text-primary" />
                         </div>
-                        <span className="text-lg font-bold text-foreground">0h 0m</span>
-                        <span className="text-xs text-muted-foreground">Total time</span>
+                        <span className="text-lg font-bold text-foreground">{workoutStats.timeLabel}</span>
+                        <span className="text-xs text-muted-foreground block">Total Time</span>
                     </div>
-                    <div className="w-px h-14 bg-border" />
-                    <div className="flex flex-col items-center">
-                        <div className="w-11 h-11 rounded-full bg-fitlab-orange/15 flex items-center justify-center mb-2">
+                    <div className="w-px h-12 bg-border" />
+                    <div className="flex-1 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-fitlab-orange/15 flex items-center justify-center mx-auto mb-2">
                             <Flame className="w-5 h-5 text-fitlab-orange" />
                         </div>
-                        <span className="text-lg font-bold text-foreground">0 cal</span>
-                        <span className="text-xs text-muted-foreground">Burned</span>
+                        <span className="text-lg font-bold text-foreground">{workoutStats.calories}</span>
+                        <span className="text-xs text-muted-foreground block">Burned</span>
                     </div>
-                    <div className="w-px h-14 bg-border" />
-                    <div className="flex flex-col items-center">
-                        <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center mb-2">
-                            <Trophy className="w-5 h-5 text-primary" />
+                    <div className="w-px h-12 bg-border" />
+                    <div className="flex-1 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-fitlab-blue/15 flex items-center justify-center mx-auto mb-2">
+                            <Trophy className="w-5 h-5 text-fitlab-blue" />
                         </div>
-                        <span className="text-lg font-bold text-foreground">0</span>
-                        <span className="text-xs text-muted-foreground">Done</span>
+                        <span className="text-lg font-bold text-foreground">{workoutStats.totalWorkouts}</span>
+                        <span className="text-xs text-muted-foreground block">Done</span>
                     </div>
+                </div>
+            </motion.section>
+
+            {/* ═══ Trophy Case ═══ */}
+            <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="px-6 mb-6"
+            >
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold text-foreground">🏆 Achievements</h3>
+                    <span className="text-sm font-semibold text-primary">{unlockedCount}/{badges.length}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                    {badges.map((badge, idx) => (
+                        <motion.div
+                            key={badge.id}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.2 + idx * 0.03 }}
+                            className={`solid-card p-3 text-center transition-all ${
+                                badge.unlocked
+                                    ? "border-primary/30 bg-primary/5"
+                                    : "opacity-40"
+                            }`}
+                        >
+                            <span className="text-2xl block mb-1">
+                                {badge.unlocked ? badge.emoji : "🔒"}
+                            </span>
+                            <p className="text-[9px] font-semibold text-foreground leading-tight truncate">
+                                {badge.name}
+                            </p>
+                        </motion.div>
+                    ))}
                 </div>
             </motion.section>
 
@@ -179,9 +243,9 @@ const Profile = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="px-6"
+                className="px-6 mb-6"
             >
-                <div className="solid-card-lg overflow-hidden divide-y divide-border">
+                <div className="solid-card-lg overflow-hidden divide-y divide-border mb-6">
                     {settingsSections.map((section, index) => (
                         <motion.button
                             key={section.label}
@@ -203,6 +267,27 @@ const Profile = () => {
                         </motion.button>
                     ))}
                 </div>
+
+                <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    onClick={() => {
+                        if (window.confirm("Are you sure you want to reset all data? This cannot be undone.")) {
+                            // Only clear FitLab specific keys to prevent wiping other localhost application data
+                            Object.keys(localStorage).forEach(key => {
+                                if (key.startsWith('fitlab-')) {
+                                    localStorage.removeItem(key);
+                                }
+                            });
+                            window.location.href = "/";
+                        }
+                    }}
+                    className="w-full py-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive font-bold text-base flex items-center justify-center gap-2 hover:bg-destructive/20 transition-all"
+                >
+                    <Trash2 className="w-5 h-5" />
+                    Reset All Data
+                </motion.button>
             </motion.section>
 
             {/* Edit Profile Modal */}

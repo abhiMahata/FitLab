@@ -14,6 +14,7 @@ import {
     getCloserSide, drawSkeleton,
     drawLine, drawCircle, drawAngleArc, drawDottedLine, drawLabel,
     getAccuracy, defaultStats,
+    drawARTrail, drawHeatmap
 } from "./poseUtils";
 
 // ─── Thresholds ──────────────────────────────────────────────────────
@@ -67,6 +68,10 @@ export class PushupProcessor implements IExerciseProcessor {
     private static readonly MIN_BOTTOM_FRAMES = 2;
     private static readonly MAX_VERTICAL_RATIO = 0.60; // body must be <60% vertical span vs horizontal
 
+    // ── WOW Features: AR Trails & Heatmap ──
+    private shldrTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 15;
+
     constructor(thresholds: PushupThresholds) {
         this.thresholds = thresholds;
     }
@@ -84,6 +89,7 @@ export class PushupProcessor implements IExerciseProcessor {
         this.inactiveTime = 0;
         this.bottomFrames = 0;
         this.bottomConfirmed = false;
+        this.shldrTrail = [];
     }
 
     private getState(elbowAngle: number): string | null {
@@ -145,6 +151,22 @@ export class PushupProcessor implements IExerciseProcessor {
         // Draw body line indicator
         const lineColor = bodyAngle >= minAlign && bodyAngle <= maxAlign ? COLORS.green : COLORS.red;
         drawLine(ctx, side.shldr, side.ankle, lineColor, 2);
+
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        const minElbowAngle = this.thresholds.ELBOW_ANGLE.DOWN[1];
+        const maxElbowAngle = this.thresholds.ELBOW_ANGLE.UP[0];
+        const depthRatio = (maxElbowAngle - elbowAngle) / (maxElbowAngle - minElbowAngle);
+        
+        drawHeatmap(ctx, side.shldr, side.elbow, depthRatio);
+
+        this.shldrTrail.push({ x: side.shldr.x, y: side.shldr.y, alpha: 1.0 });
+        if (this.shldrTrail.length > PushupProcessor.MAX_TRAIL_LENGTH) {
+            this.shldrTrail.shift();
+        }
+        for (let i = 0; i < this.shldrTrail.length; i++) {
+            this.shldrTrail[i].alpha = (i + 1) / this.shldrTrail.length;
+        }
+        drawARTrail(ctx, this.shldrTrail);
 
         // ── Hardening: body orientation check ──
         // In a real push-up, the body is roughly horizontal.

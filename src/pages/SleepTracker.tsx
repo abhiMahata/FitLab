@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   ArrowLeft, Moon, Sun, Clock, Play, Square, Star, Sparkles,
-  TrendingUp, TrendingDown, ChevronRight, RotateCcw, AlarmClock,
+  TrendingUp, TrendingDown, ChevronRight, RotateCcw, AlarmClock, Brain,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
 import AlarmScreen from "@/components/AlarmScreen";
+import { getAdvisoriesFor, getFitLabContext } from "@/lib/fitlabBrain";
 
 // I am Fucking Gay. Such a goddamn fucking gay
 interface SleepEntry {
@@ -251,6 +252,10 @@ const SleepTracker = () => {
 
   const scoreInfo = todayEntry ? getScoreLabel(todayEntry.score) : getScoreLabel(avgScore);
 
+  // ── Cross-feature brain advisories ──
+  const brainCtx = useMemo(() => getFitLabContext(), [entries]);
+  const sleepAdvisories = useMemo(() => getAdvisoriesFor("sleep"), [entries]);
+
   // ─── Render ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -307,6 +312,48 @@ const SleepTracker = () => {
                 )}
               </div>
             </section>
+
+            {/* ── FitLab Brain: Cross-Feature Advisory for Sleep ── */}
+            {sleepAdvisories.length > 0 && (
+              <section className="px-6 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-bold text-foreground uppercase tracking-wider">Recovery Advisory</span>
+                  {brainCtx.workout.didWorkoutToday && (
+                    <span className="ml-auto text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-bold">
+                      Trained Today
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {sleepAdvisories.slice(0, 2).map((adv) => {
+                    const colorMap = {
+                      positive: "border-primary/30 bg-primary/5",
+                      info: "border-fitlab-blue/30 bg-fitlab-blue/5",
+                      warning: "border-fitlab-orange/30 bg-fitlab-orange/5",
+                      critical: "border-destructive/30 bg-destructive/5",
+                    };
+                    const titleColorMap = {
+                      positive: "text-primary",
+                      info: "text-fitlab-blue",
+                      warning: "text-fitlab-orange",
+                      critical: "text-destructive",
+                    };
+                    return (
+                      <div key={adv.id} className={`rounded-2xl border p-3 ${colorMap[adv.level]}`}>
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-lg flex-shrink-0">{adv.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-bold text-xs ${titleColorMap[adv.level]}`}>{adv.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{adv.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* Today's Stats (if available) */}
             {todayEntry && (

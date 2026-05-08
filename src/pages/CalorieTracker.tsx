@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, Plus, Trash2, Flame, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Flame, X, Brain } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
 import { getProfile, calculateTDEE } from "@/lib/userProfile";
+import { getAdvisoriesFor, getFitLabContext } from "@/lib/fitlabBrain";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -137,6 +138,11 @@ const CalorieTracker = () => {
   // Persist
   useEffect(() => { saveData(weekData); }, [weekData]);
 
+  // ── Cross-feature advisories ──
+  const brainCtx = useMemo(() => getFitLabContext(), [weekData]);
+  const calorieAdvisories = useMemo(() => getAdvisoriesFor("calories"), [weekData]);
+  const isToday = selectedDay === todayIdx;
+
   const dayKey = DAYS[selectedDay];
   const dayData = weekData[dayKey] || { entries: [] };
   const totalConsumed = dayData.entries.reduce((s, e) => s + e.calories, 0);
@@ -245,6 +251,48 @@ const CalorieTracker = () => {
           </div>
         </div>
       </section>
+
+      {/* ── FitLab Brain Fuel Advisory (only show for today) ── */}
+      {isToday && calorieAdvisories.length > 0 && (
+        <section className="px-6 mt-3 mb-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold text-foreground uppercase tracking-wider">Fuel Advisory</span>
+            {brainCtx.recommendedCalorieAdjustment > 0 && (
+              <span className="ml-auto text-xs bg-fitlab-orange/15 text-fitlab-orange px-2 py-0.5 rounded-full font-bold">
+                +{brainCtx.recommendedCalorieAdjustment} kcal recommended
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {calorieAdvisories.slice(0, 2).map((adv) => {
+              const colorMap = {
+                positive: "border-primary/30 bg-primary/5",
+                info: "border-fitlab-blue/30 bg-fitlab-blue/5",
+                warning: "border-fitlab-orange/30 bg-fitlab-orange/5",
+                critical: "border-destructive/30 bg-destructive/5",
+              };
+              const titleColorMap = {
+                positive: "text-primary",
+                info: "text-fitlab-blue",
+                warning: "text-fitlab-orange",
+                critical: "text-destructive",
+              };
+              return (
+                <div key={adv.id} className={`rounded-2xl border p-3 ${colorMap[adv.level]}`}>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-lg flex-shrink-0">{adv.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-bold text-xs ${titleColorMap[adv.level]}`}>{adv.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{adv.message}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Meal Sections */}
       <section className="px-6 mt-4">

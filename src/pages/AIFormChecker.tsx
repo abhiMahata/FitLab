@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowLeft, Dumbbell, User, Minus, Plus, Sparkles, Loader2, Video, RotateCcw, SwitchCamera, Eye } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { ArrowLeft, Dumbbell, User, Minus, Plus, Sparkles, Loader2, Video, RotateCcw, SwitchCamera, Eye, Volume2, VolumeX, Brain } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Camera } from "@capacitor/camera";
 import ExerciseCard from "@/components/ExerciseCard";
 import BottomMenu from "@/components/BottomMenu";
 import { usePoseLandmarker } from "@/hooks/usePoseLandmarker";
 import { type ExerciseStats, type IExerciseProcessor, type CameraView } from "@/lib/poseUtils";
 import { saveFormSession } from "@/lib/formSessionUtils";
+import { getAdvisoriesFor, getFitLabContext, getIntensityLabel } from "@/lib/fitlabBrain";
 import { SquatProcessor } from "@/lib/squatProcessor";
 import { DeadliftProcessor } from "@/lib/deadliftProcessor";
 import { BenchPressProcessor } from "@/lib/benchProcessor";
@@ -63,6 +65,7 @@ const AIFormChecker = () => {
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [cameraView, setCameraView] = useState<CameraView>("side");
   const [poseDetected, setPoseDetected] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
   const [stats, setStats] = useState<ExerciseStats>({
     correctCount: 0,
     incorrectCount: 0,
@@ -80,6 +83,7 @@ const AIFormChecker = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
+  const lastSpokenRef = useRef<Record<string, number>>({});
   const processorRef = useRef<IExerciseProcessor>(
     createProcessor("Squat", "Beginner")
   );
@@ -87,6 +91,11 @@ const AIFormChecker = () => {
   const sessionStartRef = useRef<number>(0);
 
   const { landmarker, isLoading: isModelLoading, error: modelError } = usePoseLandmarker();
+
+  // ── Cross-feature brain context ──
+  const brainCtx = useMemo(() => getFitLabContext(), []);
+  const formAdvisories = useMemo(() => getAdvisoriesFor("formchecker"), []);
+  const intensityInfo = useMemo(() => getIntensityLabel(brainCtx.intensityModifier), [brainCtx.intensityModifier]);
 
   // Recreate processor when mode or exercise changes
   useEffect(() => {
@@ -124,6 +133,14 @@ const AIFormChecker = () => {
         if (videoRef.current?.srcObject) {
           (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
         }
+
+        // Native permission request for Android/iOS
+        try {
+          await Camera.requestPermissions({ permissions: ['camera'] });
+        } catch (e) {
+          console.warn("Capacitor Camera permissions request failed, falling back to web:", e);
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
           audio: false,
@@ -210,6 +227,23 @@ const AIFormChecker = () => {
       }
     };
   }, [showCamera, isModelLoading, detectFrame]);
+
+  // TTS Engine
+  useEffect(() => {
+    if (!ttsEnabled || stats.currentFeedback.length === 0) return;
+
+    const now = Date.now();
+    stats.currentFeedback.forEach(msg => {
+      const lastSpoken = lastSpokenRef.current[msg] || 0;
+      // Only speak the same message every 4 seconds to avoid spam
+      if (now - lastSpoken > 4000) {
+        lastSpokenRef.current[msg] = now;
+        const utterance = new SpeechSynthesisUtterance(msg);
+        utterance.rate = 1.1; // slightly faster for coaching
+        window.speechSynthesis.speak(utterance);
+      }
+    });
+  }, [stats.currentFeedback, ttsEnabled]);
 
   const handleReset = () => {
     processorRef.current.reset();
@@ -317,6 +351,50 @@ const AIFormChecker = () => {
                 ))}
               </div>
             </section>
+
+            {/* ── FitLab Brain: Pre-Session Advisory ── */}
+            {formAdvisories.length > 0 && (
+              <section className="px-6 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-bold text-foreground uppercase tracking-wider">Pre-Session Advisory</span>
+                  <div className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${
+                    brainCtx.intensityModifier >= 1.1 ? "bg-primary/15 text-primary" :
+                    brainCtx.intensityModifier >= 0.85 ? "bg-muted text-foreground" :
+                    "bg-fitlab-orange/15 text-fitlab-orange"
+                  }`}>
+                    {intensityInfo.emoji} {intensityInfo.label}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {formAdvisories.slice(0, 1).map((adv) => {
+                    const colorMap = {
+                      positive: "border-primary/30 bg-primary/5",
+                      info: "border-fitlab-blue/30 bg-fitlab-blue/5",
+                      warning: "border-fitlab-orange/30 bg-fitlab-orange/5",
+                      critical: "border-destructive/30 bg-destructive/5",
+                    };
+                    const titleColorMap = {
+                      positive: "text-primary",
+                      info: "text-fitlab-blue",
+                      warning: "text-fitlab-orange",
+                      critical: "text-destructive",
+                    };
+                    return (
+                      <div key={adv.id} className={`rounded-2xl border p-4 ${colorMap[adv.level]}`}>
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl flex-shrink-0">{adv.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-bold text-sm ${titleColorMap[adv.level]}`}>{adv.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{adv.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* AI Insights Banner */}
             <section className="px-6">
@@ -478,6 +556,16 @@ const AIFormChecker = () => {
                     className="w-13 h-13 rounded-xl bg-card flex items-center justify-center border border-border"
                   >
                     <SwitchCamera className="w-5 h-5 text-white" />
+                  </button>
+
+                  <button
+                    onClick={() => setTtsEnabled(!ttsEnabled)}
+                    className={`w-13 h-13 rounded-xl flex items-center justify-center border transition-colors ${ttsEnabled
+                      ? "bg-primary/15 border-primary text-primary"
+                      : "bg-card border-border text-white"
+                      }`}
+                  >
+                    {ttsEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 text-white/50" />}
                   </button>
 
                   {/* Side/Front toggle — available for all exercises */}

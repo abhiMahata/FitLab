@@ -247,3 +247,61 @@ export function drawSkeleton(
         drawCircle(ctx, pt, jointRadius, jointColor)
     );
 }
+
+// ─── WOW Features ─────────────────────────────────────────────────────
+
+/** WOW FEATURE: Draw glowing AR Trajectory Trail */
+export function drawARTrail(ctx: CanvasRenderingContext2D, trail: { x: number; y: number; alpha: number }[]) {
+    if (trail.length < 2) return;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (let i = 1; i < trail.length; i++) {
+        const p1 = trail[i - 1];
+        const p2 = trail[i];
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        // Outer neon glow
+        ctx.strokeStyle = `rgba(0, 255, 255, ${p2.alpha * 0.8})`;
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        // Inner bright core
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${p2.alpha})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+}
+
+/** WOW FEATURE: Draw Muscle Activation Heatmap between any two points */
+export function drawHeatmap(ctx: CanvasRenderingContext2D, pt1: Point, pt2: Point, depthRatio: number) {
+    // depthRatio: 0.0 (standing/relaxed) -> 1.0 (bottom/tension)
+    let r, g;
+    const boundedRatio = Math.max(0, Math.min(1, depthRatio));
+    if (boundedRatio < 0.5) {
+        // Green to Yellow
+        r = Math.floor(255 * (boundedRatio * 2));
+        g = 255;
+    } else {
+        // Yellow to Red
+        r = 255;
+        g = Math.floor(255 * (1 - (boundedRatio - 0.5) * 2));
+    }
+    const color = `rgba(${r}, ${g}, 0, 0.45)`;
+
+    ctx.beginPath();
+    const angle = Math.atan2(pt2.y - pt1.y, pt2.x - pt1.x);
+    const perpAngle = angle + Math.PI / 2;
+    const widthAtPt1 = 25;
+    const widthAtPt2 = 18;
+
+    ctx.moveTo(pt1.x + Math.cos(perpAngle) * widthAtPt1, pt1.y + Math.sin(perpAngle) * widthAtPt1);
+    ctx.lineTo(pt1.x - Math.cos(perpAngle) * widthAtPt1, pt1.y - Math.sin(perpAngle) * widthAtPt1);
+    ctx.lineTo(pt2.x - Math.cos(perpAngle) * widthAtPt2, pt2.y - Math.sin(perpAngle) * widthAtPt2);
+    ctx.lineTo(pt2.x + Math.cos(perpAngle) * widthAtPt2, pt2.y + Math.sin(perpAngle) * widthAtPt2);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+}

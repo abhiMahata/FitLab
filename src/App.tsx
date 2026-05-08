@@ -18,7 +18,7 @@ import { getProfile } from "./lib/userProfile";
 import { AuthProvider, useAuth } from "./lib/authContext";
 import { trackEvent } from "./lib/firebase";
 
-/** Tracks page views whenever the route changes */
+
 function PageTracker() {
   const location = useLocation();
   useEffect(() => {
@@ -27,7 +27,7 @@ function PageTracker() {
   return null;
 }
 
-/** Inner app — has access to useAuth() */
+
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
@@ -36,7 +36,7 @@ const AppContent = () => {
     return p ? p.completedOnboarding : false;
   });
 
-  // Show splash first
+ 
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
@@ -50,12 +50,11 @@ const AppContent = () => {
     );
   }
 
-  // Not logged in → show Login page
+  
   if (!user) {
     return <Login />;
   }
 
-  // Logged in but hasn't completed onboarding → show Onboarding
   if (!hasOnboarded) {
     return (
       <BrowserRouter>
@@ -66,7 +65,6 @@ const AppContent = () => {
     );
   }
 
-  // Fully authenticated + onboarded → main app
   return (
     <>
       <BadgeNotifier />

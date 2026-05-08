@@ -227,6 +227,10 @@ export class SquatProcessor {
     private static readonly MAX_TORSO_TILT = 80;         // torso must not tilt >80°
     private static readonly MAX_ANKLE_SHIFT_RATIO = 0.12; // ankles can't move >12% of body height (front)
 
+    // ── WOW Features: AR Trails & Heatmap ──
+    private hipTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 15;
+
     // Front-view specific state
     private frontDisplayText = [false, false, false];
     private frontCountFrames = [0, 0, 0];
@@ -287,6 +291,7 @@ export class SquatProcessor {
         this.standingHipY = 0;
         this.standingAnkleY = 0;
         this.hipDropValidated = false;
+        this.hipTrail = [];
     }
 
     private getState(kneeAngle: number): string | null {
@@ -538,6 +543,23 @@ export class SquatProcessor {
         this.currState = currentState;
         this.updateStateSequence(currentState);
 
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        // Calculate Depth Ratio for Heatmap (standing knee angle ~170, bottom knee angle ~70)
+        const minKneeAngle = this.thresholds.KNEE_THRESH?.[0] || 70;
+        const maxKneeAngle = this.thresholds.HIP_KNEE_VERT.NORMAL[1] || 170;
+        let depthRatio = (maxKneeAngle - kneeVertAngle) / (maxKneeAngle - minKneeAngle);
+        
+        drawHeatmap(ctx, hip, knee, depthRatio);
+
+        this.hipTrail.push({ x: hip.x, y: hip.y, alpha: 1.0 });
+        if (this.hipTrail.length > SquatProcessor.MAX_TRAIL_LENGTH) {
+            this.hipTrail.shift();
+        }
+        for (let i = 0; i < this.hipTrail.length; i++) {
+            this.hipTrail[i].alpha = (i + 1) / this.hipTrail.length;
+        }
+        drawARTrail(ctx, this.hipTrail);
+
         // ── Hardening: body reference height for proportional checks ──
         const bodyRefH = Math.max(1, Math.abs(shldr.y - ankle.y));
 
@@ -757,7 +779,21 @@ export class SquatProcessor {
         const shoulderMidY = (lShldr.y + rShldr.y) / 2;
         // depthRatio: 0 = standing (hips near shoulders), 1 = deep (hips at knee level)
         const standingLen = Math.abs(kneeMidY - shoulderMidY);
-        const depthRatio = standingLen > 0 ? Math.max(0, Math.min(1, (hipMidY - shoulderMidY) / standingLen)) : 0;
+        // Normalize depthRatio so that a standard squat (thighs parallel) is ~1.0
+        let depthRatio = standingLen > 0 ? Math.max(0, Math.min(1, (hipMidY - shoulderMidY) / (standingLen * 0.7))) : 0;
+
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        drawHeatmap(ctx, lHip, lKnee, depthRatio);
+        drawHeatmap(ctx, rHip, rKnee, depthRatio);
+
+        this.hipTrail.push({ x: hipMidX, y: hipMidY, alpha: 1.0 });
+        if (this.hipTrail.length > SquatProcessor.MAX_TRAIL_LENGTH) {
+            this.hipTrail.shift();
+        }
+        for (let i = 0; i < this.hipTrail.length; i++) {
+            this.hipTrail[i].alpha = (i + 1) / this.hipTrail.length;
+        }
+        drawARTrail(ctx, this.hipTrail);
 
         // ── Draw analysis guides ──
 

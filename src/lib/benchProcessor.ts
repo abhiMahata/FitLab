@@ -12,6 +12,7 @@ import {
     LANDMARKS, COLORS, findAngle, findJointAngle, getLandmarkCoord, getCloserSide,
     drawSkeleton, drawAngleArc, drawLabel, drawCircle,
     getAccuracy, defaultStats,
+    drawARTrail, drawHeatmap
 } from "./poseUtils";
 
 const FEEDBACK_MAP: Record<number, FeedbackEntry> = {
@@ -43,6 +44,10 @@ export class BenchPressProcessor implements IExerciseProcessor {
     private wristDisplacementTracked = false;
     private static readonly MIN_WRIST_DISPLACEMENT_RATIO = 0.10; // wrist must move ≥10% of body ref
 
+    // ── WOW Features: AR Trails & Heatmap ──
+    private wristTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 15;
+
     constructor(thresholds: BenchThresholds) {
         this.thresholds = thresholds;
     }
@@ -66,6 +71,7 @@ export class BenchPressProcessor implements IExerciseProcessor {
         this.repCount = 0; this.improperRep = 0;
         this.wristYAtTop = 0; this.wristYAtBottom = 0;
         this.wristDisplacementTracked = false;
+        this.wristTrail = [];
     }
 
     private getState(elbowAngle: number): string | null {
@@ -132,6 +138,23 @@ export class BenchPressProcessor implements IExerciseProcessor {
         // ── Draw ──
         drawAngleArc(ctx, elbow, 25, -90, -90 + multiplier * elbowAngle, COLORS.cyan);
         drawSkeleton(ctx, side, COLORS.purple);
+
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        const maxElbowAngle = this.thresholds.ELBOW_ANGLE.NORMAL[1]; // ~180 standing
+        const minElbowAngle = this.thresholds.ELBOW_ANGLE.PASS[0]; // ~90 bottom
+        const depthRatio = (maxElbowAngle - elbowAngle) / (maxElbowAngle - minElbowAngle);
+        
+        // Bench Press works chest and triceps: highlight shoulder-elbow
+        drawHeatmap(ctx, shldr, elbow, depthRatio);
+
+        this.wristTrail.push({ x: wrist.x, y: wrist.y, alpha: 1.0 });
+        if (this.wristTrail.length > BenchPressProcessor.MAX_TRAIL_LENGTH) {
+            this.wristTrail.shift();
+        }
+        for (let i = 0; i < this.wristTrail.length; i++) {
+            this.wristTrail[i].alpha = (i + 1) / this.wristTrail.length;
+        }
+        drawARTrail(ctx, this.wristTrail);
 
         // ── State machine ──
         const currentState = this.getState(elbowAngle);

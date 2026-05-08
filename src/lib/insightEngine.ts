@@ -7,6 +7,7 @@
 
 import { getTodayLog, loadWorkoutLogs } from "./exerciseLibrary";
 import { getProfile, calculateTDEE, getWaterGoalMl } from "./userProfile";
+import { loadFormSessions } from "./formSessionUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -191,7 +192,7 @@ export function generateInsights(): Insight[] {
 
   // ── 7. Very low water all day (after noon) ──
   const hour = new Date().getHours();
-  if (hour >= 14 && waterPct < 30 && !insights.find(i => i.id === "workout-water")) {
+  if (hour >= 14 && waterPct < 40 && !insights.find(i => i.id === "workout-water")) {
     insights.push({
       id: "low-water",
       icon: "🚰",
@@ -237,6 +238,55 @@ export function generateInsights(): Insight[] {
       priority: 8,
     });
   }
+
+  // ── 11. Form accuracy cross-feature ──
+  try {
+    const formSessions = loadFormSessions().slice(0, 6);
+    if (formSessions.length >= 3) {
+      const avgAccuracy = Math.round(formSessions.reduce((s, e) => s + e.accuracy, 0) / formSessions.length);
+      const recentAvg = Math.round(formSessions.slice(0, 3).reduce((s, e) => s + e.accuracy, 0) / 3);
+      const olderAvg = formSessions.length >= 4
+        ? Math.round(formSessions.slice(3).reduce((s, e) => s + e.accuracy, 0) / formSessions.slice(3).length)
+        : recentAvg;
+
+      if (avgAccuracy >= 80 && recentAvg > olderAvg + 5) {
+        insights.push({
+          id: "form-improving",
+          icon: "🎯",
+          title: "Form is Getting Better!",
+          message: `Your AI form accuracy is trending up (${avgAccuracy}% avg). Consider increasing weight or switching to Pro mode in AI Form Checker.`,
+          color: "green",
+          priority: 5,
+        });
+      } else if (avgAccuracy < 60 && todayLog) {
+        insights.push({
+          id: "form-needs-work",
+          icon: "🔍",
+          title: "Technique Before Weight",
+          message: `Your recent form accuracy is ${avgAccuracy}%. Use AI Form Checker to refine technique before adding more load — it prevents injuries.`,
+          color: "blue",
+          priority: 6,
+        });
+      }
+    }
+  } catch { /* noop */ }
+
+  // ── 12. Weekly workout frequency ──
+  try {
+    const logs = JSON.parse(localStorage.getItem("fitlab-workout-logs") || "[]");
+    const cutoff = Date.now() - 7 * 86400000;
+    const weeklyCount = logs.filter((l: { completedAt: number }) => l.completedAt > cutoff).length;
+    if (weeklyCount >= 5) {
+      insights.push({
+        id: "high-frequency",
+        icon: "🔥",
+        title: "High Training Frequency",
+        message: `${weeklyCount} sessions this week! Make sure you have at least 1-2 rest days to avoid overtraining and let your muscles recover.`,
+        color: "orange",
+        priority: 4,
+      });
+    }
+  } catch { /* noop */ }
 
   // Sort by priority and return top 3
   insights.sort((a, b) => a.priority - b.priority);

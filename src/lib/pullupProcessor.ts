@@ -14,6 +14,7 @@ import {
     findJointAngle, getLandmarkCoord,
     drawLine, drawCircle, drawLabel,
     getAccuracy, defaultStats,
+    drawARTrail, drawHeatmap
 } from "./poseUtils";
 
 // ─── Thresholds ──────────────────────────────────────────────────────
@@ -64,6 +65,10 @@ export class PullupProcessor implements IExerciseProcessor {
     private static readonly MIN_EXTENSION_ANGLE = 150;  // ≥15° for full arm extension
     private static readonly SWING_SHOULDER_WIDTH_RATIO = 2.0; // max swing = 2x shoulder width
 
+    // ── WOW Features: AR Trails & Heatmap ──
+    private noseTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 15;
+
     constructor(thresholds: PullupThresholds) {
         this.thresholds = thresholds;
     }
@@ -81,6 +86,7 @@ export class PullupProcessor implements IExerciseProcessor {
         this.inactiveTime = 0;
         this.chinAboveBar = false;
         this.fullExtensionReached = false;
+        this.noseTrail = [];
     }
 
     private getState(elbowAngle: number): string | null {
@@ -142,6 +148,23 @@ export class PullupProcessor implements IExerciseProcessor {
         // Draw labels
         drawLabel(ctx, `${Math.round(lElbowAngle)}°`, { x: lElbow.x - 50, y: lElbow.y }, "rgba(0,0,0,0.6)", COLORS.lightGreen, 12);
         drawLabel(ctx, `${Math.round(rElbowAngle)}°`, { x: rElbow.x + 15, y: rElbow.y }, "rgba(0,0,0,0.6)", COLORS.lightGreen, 12);
+
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        const minElbowAngle = this.thresholds.ELBOW_ANGLE.UP[0]; // ~25
+        const maxElbowAngle = this.thresholds.ELBOW_ANGLE.DOWN[1]; // ~180
+        const depthRatio = (maxElbowAngle - avgElbowAngle) / (maxElbowAngle - minElbowAngle);
+        
+        drawHeatmap(ctx, lShldr, lElbow, depthRatio);
+        drawHeatmap(ctx, rShldr, rElbow, depthRatio);
+
+        this.noseTrail.push({ x: nose.x, y: nose.y, alpha: 1.0 });
+        if (this.noseTrail.length > PullupProcessor.MAX_TRAIL_LENGTH) {
+            this.noseTrail.shift();
+        }
+        for (let i = 0; i < this.noseTrail.length; i++) {
+            this.noseTrail[i].alpha = (i + 1) / this.noseTrail.length;
+        }
+        drawARTrail(ctx, this.noseTrail);
 
         // Body swing check — Hardening: normalize against shoulder width
         const shoulderWidth = Math.abs(lShldr.x - rShldr.x);

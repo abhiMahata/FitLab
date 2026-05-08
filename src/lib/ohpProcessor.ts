@@ -12,6 +12,7 @@ import {
     LANDMARKS, COLORS, findAngle, findJointAngle, getLandmarkCoord, getCloserSide,
     drawSkeleton, drawAngleArc, drawDottedLine, drawLabel, drawCircle,
     getAccuracy, defaultStats,
+    drawARTrail, drawHeatmap
 } from "./poseUtils";
 
 const FEEDBACK_MAP: Record<number, FeedbackEntry> = {
@@ -40,6 +41,10 @@ export class OHPProcessor implements IExerciseProcessor {
     // ── Hardening: anti-cheat validation ──
     private lockoutValidated = false;  // wrist must be above shoulder at lockout
 
+    // ── WOW Features: AR Trails & Heatmap ──
+    private wristTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 15;
+
     constructor(thresholds: OHPThresholds) {
         this.thresholds = thresholds;
     }
@@ -62,6 +67,7 @@ export class OHPProcessor implements IExerciseProcessor {
         this.prevState = null; this.currState = null;
         this.repCount = 0; this.improperRep = 0;
         this.lockoutValidated = false;
+        this.wristTrail = [];
     }
 
     private getState(elbowAngle: number): string | null {
@@ -130,6 +136,25 @@ export class OHPProcessor implements IExerciseProcessor {
         drawDottedLine(ctx, hip, hip.y - 80, hip.y + 20, COLORS.blue);
         drawAngleArc(ctx, hip, 30, -90, -90 + multiplier * torsoLean, COLORS.white);
         drawSkeleton(ctx, side, COLORS.cyan);
+
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        const maxElbowAngle = this.thresholds.ELBOW_ANGLE.PASS[0]; // ~160
+        const minElbowAngle = this.thresholds.ELBOW_ANGLE.NORMAL[1]; // ~90
+        let depthRatio = (elbowAngle - minElbowAngle) / (maxElbowAngle - minElbowAngle);
+        // OHP tension is highest at the bottom (min angle = red) and lower at the top (max angle = green)
+        // So we invert the depthRatio for Heatmap (0 = top, 1 = bottom)
+        depthRatio = 1.0 - depthRatio;
+
+        drawHeatmap(ctx, shldr, elbow, depthRatio);
+
+        this.wristTrail.push({ x: wrist.x, y: wrist.y, alpha: 1.0 });
+        if (this.wristTrail.length > OHPProcessor.MAX_TRAIL_LENGTH) {
+            this.wristTrail.shift();
+        }
+        for (let i = 0; i < this.wristTrail.length; i++) {
+            this.wristTrail[i].alpha = (i + 1) / this.wristTrail.length;
+        }
+        drawARTrail(ctx, this.wristTrail);
 
         // ── State machine ──
         const currentState = this.getState(elbowAngle);

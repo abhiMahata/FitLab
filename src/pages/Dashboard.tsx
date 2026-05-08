@@ -10,6 +10,7 @@ import { getStreakDisplay } from "@/lib/streakUtils";
 import { getProfile, getWaterGoalMl } from "@/lib/userProfile";
 import { generateInsights } from "@/lib/insightEngine";
 import { getSyncStatus } from "@/lib/cloudSync";
+import { getFitLabContext } from "@/lib/fitlabBrain";
 
 const BOTTLE_SIZES = [
   { label: "250 ml", ml: 250 },
@@ -110,6 +111,9 @@ const Dashboard = () => {
 
   // ── Cross-feature insights ──
   const insights = useMemo(() => generateInsights(), [waterMl, todayLog]);
+
+  // ── Brain headline ──
+  const brainCtx = useMemo(() => getFitLabContext(), [waterMl, todayLog]);
 
   // ── Streak data ──
   const streak = useMemo(() => getStreakDisplay(), [waterMl, todayLog]);
@@ -221,6 +225,16 @@ const Dashboard = () => {
           {streak.count >= 7 && (
             <div className="absolute inset-0 bg-gradient-to-r from-fitlab-orange/5 via-transparent to-fitlab-orange/5 pointer-events-none" />
           )}
+        </motion.div>
+
+        {/* ── FitLab Brain Daily Status ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-4 px-1"
+        >
+          <p className="text-xs text-muted-foreground leading-relaxed">{brainCtx.headline}</p>
         </motion.div>
 
         {/* Quick stats row */}

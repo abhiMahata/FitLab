@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   ArrowLeft, Plus, Trash2, Play, ChevronRight, Search, X,
-  Timer, CheckCircle2, Dumbbell, ChevronDown, Weight, Sparkles,
+  Timer, CheckCircle2, Dumbbell, ChevronDown, Weight, Sparkles, Brain,
 } from "lucide-react";
+import { getAdvisoriesFor, getIntensityLabel, getFitLabContext } from "@/lib/fitlabBrain";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
@@ -21,10 +22,8 @@ const WorkoutRoster = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // ── View state ──
   const today = DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
-  // ── Restore active workout session from localStorage ──
   const savedSession = (() => {
     try {
       const raw = localStorage.getItem("fitlab-active-workout");
@@ -35,16 +34,13 @@ const WorkoutRoster = () => {
   const [view, setView] = useState<PageView>(savedSession ? "workout" : "roster");
   const [selectedDay, setSelectedDay] = useState<string>(today);
 
-  // ── Roster data ──
   const [roster, setRoster] = useState<WeeklyRoster>(loadRoster);
   useEffect(() => { saveRoster(roster); }, [roster]);
 
-  // ── Browse state ──
   const [browseFilter, setBrowseFilter] = useState<MuscleGroup | "All">("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [browseDay, setBrowseDay] = useState<string>(today);
 
-  // ── Workout session state (restored from saved session if available) ──
   const [workoutDay, setWorkoutDay] = useState<string>(savedSession?.workoutDay || today);
   const [currentExIdx, setCurrentExIdx] = useState(savedSession?.currentExIdx || 0);
   const [currentSet, setCurrentSet] = useState(savedSession?.currentSet || 1);
@@ -55,7 +51,11 @@ const WorkoutRoster = () => {
   const [workoutElapsed, setWorkoutElapsed] = useState(0);
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Workout timer
+  // ── Cross-feature brain context ──
+  const brainCtx = useMemo(() => getFitLabContext(), []);
+  const workoutAdvisories = useMemo(() => getAdvisoriesFor("workout"), []);
+  const intensityInfo = useMemo(() => getIntensityLabel(brainCtx.intensityModifier), [brainCtx.intensityModifier]);
+
   useEffect(() => {
     if (view === "workout" && workoutStartTime > 0) {
       const t = setInterval(() => setWorkoutElapsed(Math.floor((Date.now() - workoutStartTime) / 1000)), 1000);
@@ -63,7 +63,6 @@ const WorkoutRoster = () => {
     }
   }, [view, workoutStartTime]);
 
-  // Persist active workout session
   useEffect(() => {
     if (view === "workout" && workoutStartTime > 0) {
       localStorage.setItem("fitlab-active-workout", JSON.stringify({
@@ -78,7 +77,6 @@ const WorkoutRoster = () => {
 
   const clearSavedSession = () => localStorage.removeItem("fitlab-active-workout");
 
-  // ── Helpers ──
   const dayRoster = roster[selectedDay] || { label: "", exercises: [] };
   const workoutExercises = roster[workoutDay]?.exercises || [];
 
@@ -88,13 +86,11 @@ const WorkoutRoster = () => {
     return matchesMuscle && matchesSearch;
   });
 
-  // Group filtered exercises by muscle
   const groupedFiltered = MUSCLE_GROUPS.map((mg) => ({
     muscle: mg,
     exercises: filteredExercises.filter((e) => e.muscle === mg),
   })).filter((g) => g.exercises.length > 0);
 
-  // Group roster exercises by muscle
   const groupedRoster = MUSCLE_GROUPS.map((mg) => ({
     muscle: mg,
     exercises: dayRoster.exercises.filter((re) => {
@@ -103,7 +99,6 @@ const WorkoutRoster = () => {
     }),
   })).filter((g) => g.exercises.length > 0);
 
-  // Auto-generate label from muscle groups
   const autoLabel = (exercises: typeof dayRoster.exercises): string => {
     const muscles = new Set<string>();
     exercises.forEach((re) => {
@@ -114,7 +109,6 @@ const WorkoutRoster = () => {
     return Array.from(muscles).join(" & ");
   };
 
-  // ── Roster actions ──
   const addExercise = useCallback((exerciseId: string) => {
     const ex = getExerciseById(exerciseId);
     if (!ex) return;
@@ -172,7 +166,6 @@ const WorkoutRoster = () => {
     }));
   }, []);
 
-  // ── Workout actions ──
   const startWorkout = useCallback((day: string) => {
     setWorkoutDay(day);
     setCurrentExIdx(0);
@@ -256,7 +249,6 @@ const WorkoutRoster = () => {
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  // ─── Render ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background pb-32">
       <AnimatePresence mode="wait">
@@ -315,6 +307,55 @@ const WorkoutRoster = () => {
                 />
               </div>
             </section>
+
+            {/* ── FitLab Brain: Cross-Feature Advisory Banner ── */}
+            {workoutAdvisories.length > 0 && (
+              <section className="px-6 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-bold text-foreground uppercase tracking-wider">Today's Advisory</span>
+                  <div
+                    className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${
+                      brainCtx.intensityModifier >= 1.1 ? "bg-primary/15 text-primary" :
+                      brainCtx.intensityModifier >= 0.85 ? "bg-muted text-foreground" :
+                      "bg-fitlab-orange/15 text-fitlab-orange"
+                    }`}
+                  >
+                    {intensityInfo.emoji} {intensityInfo.label}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {workoutAdvisories.slice(0, 2).map((adv) => {
+                    const colorMap = {
+                      positive: "border-primary/30 bg-primary/5",
+                      info: "border-fitlab-blue/30 bg-fitlab-blue/5",
+                      warning: "border-fitlab-orange/30 bg-fitlab-orange/5",
+                      critical: "border-destructive/30 bg-destructive/5",
+                    };
+                    const titleColorMap = {
+                      positive: "text-primary",
+                      info: "text-fitlab-blue",
+                      warning: "text-fitlab-orange",
+                      critical: "text-destructive",
+                    };
+                    return (
+                      <div
+                        key={adv.id}
+                        className={`rounded-2xl border p-3 ${colorMap[adv.level]}`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-lg flex-shrink-0">{adv.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-bold text-xs ${titleColorMap[adv.level]}`}>{adv.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{adv.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* Quick Start Template Banner */}
             <section className="px-6 mb-4">

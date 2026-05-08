@@ -13,6 +13,7 @@ import {
     findJointAngle, getLandmarkCoord,
     drawLine, drawCircle, drawLabel,
     getAccuracy, defaultStats,
+    drawARTrail
 } from "./poseUtils";
 
 // ─── Thresholds ──────────────────────────────────────────────────────
@@ -60,6 +61,11 @@ export class JoggingProcessor implements IExerciseProcessor {
     private startInactiveTime = performance.now();
     private inactiveTime = 0;
 
+    // ── WOW Features: AR Trails ──
+    private lAnkleTrail: { x: number; y: number; alpha: number }[] = [];
+    private rAnkleTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 10;
+
     constructor(thresholds: JoggingThresholds) {
         this.thresholds = thresholds;
     }
@@ -75,6 +81,8 @@ export class JoggingProcessor implements IExerciseProcessor {
         this.countFrames = [0, 0];
         this.startInactiveTime = performance.now();
         this.inactiveTime = 0;
+        this.lAnkleTrail = [];
+        this.rAnkleTrail = [];
     }
 
     process(
@@ -117,6 +125,17 @@ export class JoggingProcessor implements IExerciseProcessor {
         [lShldr, lElbow, lHip, lKnee, lAnkle, rShldr, rElbow, rHip, rKnee, rAnkle, nose].forEach((pt) =>
             drawCircle(ctx, pt, 5, COLORS.yellow)
         );
+
+        // ── WOW Features: Render AR Trails ──
+        this.lAnkleTrail.push({ x: lAnkle.x, y: lAnkle.y, alpha: 1.0 });
+        if (this.lAnkleTrail.length > JoggingProcessor.MAX_TRAIL_LENGTH) this.lAnkleTrail.shift();
+        for (let i = 0; i < this.lAnkleTrail.length; i++) this.lAnkleTrail[i].alpha = (i + 1) / this.lAnkleTrail.length;
+        drawARTrail(ctx, this.lAnkleTrail);
+
+        this.rAnkleTrail.push({ x: rAnkle.x, y: rAnkle.y, alpha: 1.0 });
+        if (this.rAnkleTrail.length > JoggingProcessor.MAX_TRAIL_LENGTH) this.rAnkleTrail.shift();
+        for (let i = 0; i < this.rAnkleTrail.length; i++) this.rAnkleTrail[i].alpha = (i + 1) / this.rAnkleTrail.length;
+        drawARTrail(ctx, this.rAnkleTrail);
 
         // Knee angles (hip-knee-ankle) — smaller angle = more lifted
         const lKneeAngle = findJointAngle(lHip, lKnee, lAnkle);

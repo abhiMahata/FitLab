@@ -12,6 +12,7 @@ import {
     LANDMARKS, COLORS, findAngle, getLandmarkCoord, getCloserSide,
     drawSkeleton, drawAngleArc, drawDottedLine, drawLabel, drawCircle,
     getAccuracy, defaultStats,
+    drawARTrail, drawHeatmap
 } from "./poseUtils";
 
 const FEEDBACK_MAP: Record<number, FeedbackEntry> = {
@@ -43,6 +44,10 @@ export class LungeProcessor implements IExerciseProcessor {
     private static readonly MIN_HIP_DROP_RATIO = 0.10;  // hips must drop ≥10% of body height
     private static readonly KNEE_TOE_RATIO = 0.12;      // knee-over-toe max = 12% of body height
 
+    // ── WOW Features: AR Trails & Heatmap ──
+    private hipTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 15;
+
     constructor(thresholds: LungeThresholds) {
         this.thresholds = thresholds;
     }
@@ -66,6 +71,7 @@ export class LungeProcessor implements IExerciseProcessor {
         this.repCount = 0; this.improperRep = 0;
         this.standingHipY = 0;
         this.hipDropValidated = false;
+        this.hipTrail = [];
     }
 
     private getState(kneeVertAngle: number): string | null {
@@ -136,6 +142,23 @@ export class LungeProcessor implements IExerciseProcessor {
         drawAngleArc(ctx, hip, 30, -90, -90 + multiplier * hipVertAngle, COLORS.white);
         drawDottedLine(ctx, hip, hip.y - 80, hip.y + 20, COLORS.blue);
         drawSkeleton(ctx, side, COLORS.green);
+
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        const minKneeAngle = this.thresholds.KNEE_VERT.NORMAL[0]; // ~0 standing
+        const maxKneeAngle = this.thresholds.KNEE_VERT.PASS[1]; // ~90 bottom
+        const depthRatio = (kneeVertAngle - minKneeAngle) / (maxKneeAngle - minKneeAngle);
+        
+        // Lunge works quads primarily: highlight hip-knee
+        drawHeatmap(ctx, hip, knee, depthRatio);
+
+        this.hipTrail.push({ x: hip.x, y: hip.y, alpha: 1.0 });
+        if (this.hipTrail.length > LungeProcessor.MAX_TRAIL_LENGTH) {
+            this.hipTrail.shift();
+        }
+        for (let i = 0; i < this.hipTrail.length; i++) {
+            this.hipTrail[i].alpha = (i + 1) / this.hipTrail.length;
+        }
+        drawARTrail(ctx, this.hipTrail);
 
         // ── State machine ──
         const currentState = this.getState(kneeVertAngle);

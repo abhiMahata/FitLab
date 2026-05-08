@@ -12,6 +12,7 @@ import {
     LANDMARKS, COLORS, findAngle, getLandmarkCoord, getCloserSide,
     drawSkeleton, drawAngleArc, drawDottedLine, drawLabel, drawCircle,
     getAccuracy, defaultStats,
+    drawARTrail, drawHeatmap
 } from "./poseUtils";
 
 const FEEDBACK_MAP: Record<number, FeedbackEntry> = {
@@ -41,6 +42,10 @@ export class DeadliftProcessor implements IExerciseProcessor {
     private static readonly MAX_LOCKOUT_HIP_ANGLE = 15; // hip angle must be <15° at lockout
     private static readonly BAR_DRIFT_RATIO = 0.15;    // bar drift max = 15% of body height
 
+    // ── WOW Features: AR Trails & Heatmap ──
+    private wristTrail: { x: number; y: number; alpha: number }[] = [];
+    private static readonly MAX_TRAIL_LENGTH = 15;
+
     constructor(thresholds: DeadliftThresholds) {
         this.thresholds = thresholds;
     }
@@ -63,6 +68,7 @@ export class DeadliftProcessor implements IExerciseProcessor {
         this.currState = null;
         this.repCount = 0;
         this.improperRep = 0;
+        this.wristTrail = [];
     }
 
     private getState(hipVertAngle: number): string | null {
@@ -136,6 +142,24 @@ export class DeadliftProcessor implements IExerciseProcessor {
         drawAngleArc(ctx, knee, 20, -90, -90 - multiplier * kneeVertAngle, COLORS.white);
         drawDottedLine(ctx, knee, knee.y - 50, knee.y + 20, COLORS.blue);
         drawSkeleton(ctx, side, COLORS.orange);
+
+        // ── WOW Features: Render AR Trail & Heatmap ──
+        const minHipAngle = this.thresholds.HIP_VERT.NORMAL[0]; // ~0 standing
+        const maxHipAngle = this.thresholds.HIP_VERT.PASS[1]; // ~90 bottom
+        const depthRatio = (hipVertAngle - minHipAngle) / (maxHipAngle - minHipAngle);
+        
+        // Deadlift works posterior chain: Lower back and Hamstrings
+        drawHeatmap(ctx, shldr, hip, depthRatio);
+        drawHeatmap(ctx, hip, knee, depthRatio);
+
+        this.wristTrail.push({ x: side.wrist.x, y: side.wrist.y, alpha: 1.0 });
+        if (this.wristTrail.length > DeadliftProcessor.MAX_TRAIL_LENGTH) {
+            this.wristTrail.shift();
+        }
+        for (let i = 0; i < this.wristTrail.length; i++) {
+            this.wristTrail[i].alpha = (i + 1) / this.wristTrail.length;
+        }
+        drawARTrail(ctx, this.wristTrail);
 
         // ── State machine ──
         const currentState = this.getState(hipVertAngle);

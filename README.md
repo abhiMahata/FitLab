@@ -170,33 +170,6 @@ All user data (workout plans, food logs, sleep records, water intake) is stored 
 | **Notifications** | Sonner |
 | **Themes** | next-themes |
 
----
-
-##  Building the Android APK
-
-> See the full [Android Release Guide](./android_release_guide.md) for detailed steps.
-
-```bash
-# 1. Build the production web bundle
-npm run build
-
-# 2. Sync with the Android native project
-npx cap sync android
-
-# 3. Open in Android Studio (optional)
-npx cap open android
-
-# OR — build the release APK from CLI (Windows/Linux with Gradle)
-cd android
-./gradlew assembleRelease
-```
-
-The unsigned APK will be at:
-`android/app/build/outputs/apk/release/app-release-unsigned.apk`
-
-Sign it with your keystore, then zipalign for store distribution.
-
----
 
 ## Screenshots
 

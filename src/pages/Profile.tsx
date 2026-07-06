@@ -145,13 +145,14 @@ const Profile = () => {
             iconColor: "text-fitlab-purple",
             action: handleExportData,
         },
+        /*
         {
             label: "Team Credits",
             icon: Users,
             iconBg: "bg-green-500/15",
             iconColor: "text-green-500",
             action: () => setShowCredits(true),
-        },
+        },*/
         {
             label: "Help",
             icon: HelpCircle,
@@ -231,10 +232,10 @@ const Profile = () => {
                 </p>
 
                 {userProfile && (
-                     <div className="flex items-center gap-2">
-                         <span className="px-2 py-1.5 rounded-md bg-primary/15 text-primary text-xs font-bold uppercase tracking-wider">{userProfile.goal}</span>
-                         <span className="px-2 py-1.5 rounded-md bg-muted border border-border text-foreground text-xs font-bold">BMI: {bmi}</span>
-                     </div>
+                    <div className="flex items-center gap-2">
+                        <span className="px-2 py-1.5 rounded-md bg-primary/15 text-primary text-xs font-bold uppercase tracking-wider">{userProfile.goal}</span>
+                        <span className="px-2 py-1.5 rounded-md bg-muted border border-border text-foreground text-xs font-bold">BMI: {bmi}</span>
+                    </div>
                 )}
             </motion.section>
 
@@ -290,11 +291,10 @@ const Profile = () => {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.2 + idx * 0.03 }}
-                            className={`solid-card p-3 text-center transition-all ${
-                                badge.unlocked
+                            className={`solid-card p-3 text-center transition-all ${badge.unlocked
                                     ? "border-primary/30 bg-primary/5"
                                     : "opacity-40"
-                            }`}
+                                }`}
                         >
                             <span className="text-2xl block mb-1">
                                 {badge.unlocked ? badge.emoji : "🔒"}
@@ -677,12 +677,12 @@ const Profile = () => {
                             <h3 className="text-white font-bold tracking-wider mr-2 text-sm drop-shadow-md">THE TEAM</h3>
                             <div className="w-10" />
                         </div>
-                        
+
                         {/* Image Full Size */}
                         <div className="flex-1 flex items-center justify-center w-full h-full overflow-hidden bg-black">
-                            <img 
-                                src={teamCreditsImg} 
-                                alt="Team" 
+                            <img
+                                src={teamCreditsImg}
+                                alt="Team"
                                 className="w-full h-full object-contain"
                             />
                         </div>

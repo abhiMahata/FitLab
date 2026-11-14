@@ -7,7 +7,7 @@ import { checkBadges } from "@/lib/badgeUtils";
 import { loadWorkoutLogs } from "@/lib/exerciseLibrary";
 import { getProfile as getUserProfile, saveProfile as saveUserProfile, calculateBMI, type Goal, type FitnessLevel, type UserProfile } from "@/lib/userProfile";
 import { useAuth } from "@/lib/authContext";
-import teamCreditsImg from "@/assets/team_credits.png";
+import teamCreditsImg from "@/assets/team_credits.jpeg";
 
 type ThemeMode = "dark" | "light";
 

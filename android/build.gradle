@@ -22,6 +22,22 @@ allprojects {
         google()
         mavenCentral()
     }
+    // Force all modules to compile with the installed JDK instead of requesting a specific toolchain
+    plugins.withType(com.android.build.gradle.BasePlugin).configureEach {
+        project.android {
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_21
+                targetCompatibility JavaVersion.VERSION_21
+            }
+        }
+    }
+    tasks.withType(JavaCompile).configureEach {
+        options.fork = true
+        options.forkOptions.jvmArgs = []
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(25)
+        }
+    }
 }
 
 task clean(type: Delete) {

@@ -7,33 +7,53 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies and build outputs
+node_modules/
+dist/
+dist-ssr/
 *.local
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+local.properties
+*.signing.properties
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-INTERVIEW_README.md*
 
-# Android build artifacts
+# Internal documentation (preserve locally, omit from Git)
+INTERVIEW_README.md
+android_release_guide.md
+app_summary.md
+
+# Engineering logs (preserve locally, omit from Git)
+AUDIT_LOG.md
+NEXT_STEPS.md
+
+# Android build artifacts & binaries
 android/build/
 android/app/build/
 android/.gradle/
 android/capacitor-cordova-android-plugins/build/
+*.apk
+*.aab
+FitLab-v1.2-Release.apk
 
-# Generated files
+# Android keystores & signing
+*.jks
+*.keystore
+fitlab-release-key-v2.jks
+
+# Generated temporary files
 qr-code.png
 *.png.bak
-
-fitlab-release-key-v2.jks
-*.jks
-

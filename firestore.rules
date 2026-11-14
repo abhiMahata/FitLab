@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // FitLab User Profile and Synced Data
+    // Each user has a single document stored at /users/{userId}.
+    // A user can only read, write, or update their own personal document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Default deny: Block all other document reads/writes across the database
+    match /{document=**} {
+      allow read, write: false;
+    }
+  }
+}
+

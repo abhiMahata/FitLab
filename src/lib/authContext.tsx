@@ -53,9 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const signIn = async (email: string, password: string) => {
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        // Sync starts automatically via onAuthStateChanged
-        if (cred.user) startAutoSync(cred.user.uid);
+        await signInWithEmailAndPassword(auth, email, password);
+        // Sync starts automatically via onAuthStateChanged subscriber
         trackEvent("login", { method: "email" });
     };
 
@@ -68,12 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const signOut = async () => {
-        // Push final data before signing out
+        // Push final data before signing out if connected
         if (user) {
-            await pushToCloud(user.uid);
+            try {
+                await pushToCloud(user.uid);
+            } catch {
+                // Ignore offline sync errors during signout
+            }
         }
         stopAutoSync();
         await firebaseSignOut(auth);
+        setUser(null);
     };
 
     const resetPassword = async (email: string) => {

@@ -7,6 +7,7 @@ import { checkBadges } from "@/lib/badgeUtils";
 import { loadWorkoutLogs } from "@/lib/exerciseLibrary";
 import { getProfile as getUserProfile, saveProfile as saveUserProfile, calculateBMI, type Goal, type FitnessLevel, type UserProfile } from "@/lib/userProfile";
 import { useAuth } from "@/lib/authContext";
+import { getLocalDateString } from "@/lib/utils";
 import teamCreditsImg from "@/assets/team_credits.jpeg";
 
 type ThemeMode = "dark" | "light";
@@ -21,6 +22,8 @@ const Profile = () => {
     const [showHelp, setShowHelp] = useState(false);
     const [showCredits, setShowCredits] = useState(false);
     const [passwordResetSent, setPasswordResetSent] = useState(false);
+    const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
 
     // Fitness profile editor state
     const [editAge, setEditAge] = useState(25);
@@ -73,10 +76,18 @@ const Profile = () => {
     };
 
     const handleChangePassword = async () => {
-        if (user?.email) {
+        if (!user?.email) return;
+        try {
+            setIsResettingPassword(true);
+            setPasswordResetError(null);
             await resetPassword(user.email);
             setPasswordResetSent(true);
             setTimeout(() => setPasswordResetSent(false), 4000);
+        } catch (err: any) {
+            setPasswordResetError(err?.message || "Failed to send reset email. Please try again.");
+            setTimeout(() => setPasswordResetError(null), 5000);
+        } finally {
+            setIsResettingPassword(false);
         }
     };
 
@@ -92,7 +103,7 @@ const Profile = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `fitlab-export-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `fitlab-export-${getLocalDateString()}.json`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -423,14 +434,17 @@ const Profile = () => {
 
                             <button
                                 onClick={handleChangePassword}
-                                disabled={passwordResetSent}
+                                disabled={passwordResetSent || isResettingPassword}
                                 className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all disabled:opacity-50"
                             >
                                 <KeyRound className="w-4 h-4" />
-                                {passwordResetSent ? "Reset email sent ✓" : "Change Password"}
+                                {isResettingPassword ? "Sending..." : passwordResetSent ? "Reset email sent ✓" : "Change Password"}
                             </button>
                             {passwordResetSent && (
                                 <p className="text-xs text-primary text-center mt-2">Check your email for the reset link.</p>
+                            )}
+                            {passwordResetError && (
+                                <p className="text-xs text-destructive text-center mt-2">{passwordResetError}</p>
                             )}
                         </motion.div>
                     </motion.div>

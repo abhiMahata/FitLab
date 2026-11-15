@@ -4,6 +4,8 @@
  * Each exercise includes default sets/reps, an emoji icon, and a description.
  */
 
+import { getLocalDateString } from "./utils";
+
 export interface Exercise {
     id: string;
     name: string;
@@ -191,6 +193,6 @@ export function saveWorkoutLog(log: WorkoutLog) {
 }
 
 export function getTodayLog(): WorkoutLog | null {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateString();
     return loadWorkoutLogs().find((l) => l.date === today) || null;
 }

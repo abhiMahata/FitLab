@@ -15,6 +15,7 @@ import {
 } from "@/lib/exerciseLibrary";
 import { getProfile } from "@/lib/userProfile";
 import { getTemplateForGoal } from "@/lib/workoutTemplates";
+import { getLocalDateString, getDayName } from "@/lib/utils";
 
 type PageView = "roster" | "browse" | "workout";
 
@@ -22,7 +23,7 @@ const WorkoutRoster = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const today = DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const today = getDayName();
 
   const savedSession = (() => {
     try {
@@ -50,6 +51,15 @@ const WorkoutRoster = () => {
   const [workoutStartTime, setWorkoutStartTime] = useState(savedSession?.workoutStartTime || 0);
   const [workoutElapsed, setWorkoutElapsed] = useState(0);
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup rest timer on unmount
+  useEffect(() => {
+    return () => {
+      if (restTimerRef.current) {
+        clearInterval(restTimerRef.current);
+      }
+    };
+  }, []);
 
   // ── Cross-feature brain context ──
   const brainCtx = useMemo(() => getFitLabContext(), []);
@@ -225,7 +235,7 @@ const WorkoutRoster = () => {
   const finishWorkout = useCallback((completed: Record<string, number>) => {
     const log: WorkoutLog = {
       id: `${Date.now()}`,
-      date: new Date().toISOString().slice(0, 10),
+      date: getLocalDateString(),
       day: workoutDay,
       exercises: workoutExercises.map((e) => ({
         exerciseId: e.exerciseId,
@@ -315,11 +325,10 @@ const WorkoutRoster = () => {
                   <Brain className="w-4 h-4 text-primary" />
                   <span className="text-xs font-bold text-foreground uppercase tracking-wider">Today's Advisory</span>
                   <div
-                    className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${
-                      brainCtx.intensityModifier >= 1.1 ? "bg-primary/15 text-primary" :
-                      brainCtx.intensityModifier >= 0.85 ? "bg-muted text-foreground" :
-                      "bg-fitlab-orange/15 text-fitlab-orange"
-                    }`}
+                    className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${brainCtx.intensityModifier >= 1.1 ? "bg-primary/15 text-primary" :
+                        brainCtx.intensityModifier >= 0.85 ? "bg-muted text-foreground" :
+                          "bg-fitlab-orange/15 text-fitlab-orange"
+                      }`}
                   >
                     {intensityInfo.emoji} {intensityInfo.label}
                   </div>
@@ -734,7 +743,7 @@ const WorkoutRoster = () => {
                         const e = getExerciseById(re.exerciseId);
                         if (!e) return null;
                         return (
-                        <div key={re.exerciseId} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/30">
+                          <div key={re.exerciseId} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/30">
                             <span className="text-lg">{e.emoji}</span>
                             <span className="text-sm text-muted-foreground">{e.name}</span>
                             <span className="ml-auto text-xs text-muted-foreground">

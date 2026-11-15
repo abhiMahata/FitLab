@@ -7,7 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies and build outputs
+# Dependencies n build outputs
 node_modules/
 dist/
 dist-ssr/
@@ -54,6 +54,6 @@ FitLab-v1.2-Release.apk
 *.keystore
 fitlab-release-key-v2.jks
 
-# Generated temporary files
+# temporary files
 qr-code.png
 *.png.bak

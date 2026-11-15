@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, Dumbbell, User, Minus, Plus, Sparkles, Loader2, Video, RotateCcw, SwitchCamera, Eye, Volume2, VolumeX, Brain } from "lucide-react";
+import { ArrowLeft, Dumbbell, User, Minus, Plus, Sparkles, Loader2, Video, RotateCcw, SwitchCamera, Eye, Volume2, VolumeX, Brain, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera } from "@capacitor/camera";
@@ -90,7 +90,22 @@ const AIFormChecker = () => {
   const lastTimestampRef = useRef<number>(-1);
   const sessionStartRef = useRef<number>(0);
 
-  const { landmarker, isLoading: isModelLoading, error: modelError } = usePoseLandmarker();
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraRetryCount, setCameraRetryCount] = useState(0);
+
+  const { landmarker, isLoading: isModelLoading, error: modelError, delegateUsed, retry: retryModel } = usePoseLandmarker();
+
+  // Cancel speech and rAF on component unmount
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   // ── Cross-feature brain context ──
   const brainCtx = useMemo(() => getFitLabContext(), []);
@@ -109,6 +124,7 @@ const AIFormChecker = () => {
     processorRef.current = createProcessor(name, mode);
     setCameraView("side"); // reset view on exercise change
     sessionStartRef.current = Date.now();
+    setCameraError(null);
     setTimeout(() => setShowCamera(true), 300);
   };
 
@@ -121,17 +137,25 @@ const AIFormChecker = () => {
     }
   };
 
-  // Start camera (re-runs when facingMode changes)
+  const retryCamera = () => {
+    setCameraError(null);
+    setCameraRetryCount((c) => c + 1);
+  };
+
+  // Start camera (re-runs when facingMode or cameraRetryCount changes)
   useEffect(() => {
     if (!showCamera) return;
 
-    let stream: MediaStream | null = null;
+    let isSubscribed = true;
+    let localStream: MediaStream | null = null;
 
     async function startCamera() {
+      setCameraError(null);
       try {
         // Stop any existing streams first
         if (videoRef.current?.srcObject) {
           (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+          videoRef.current.srcObject = null;
         }
 
         // Native permission request for Android/iOS
@@ -141,24 +165,42 @@ const AIFormChecker = () => {
           console.warn("Capacitor Camera permissions request failed, falling back to web:", e);
         }
 
-        stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
           audio: false,
         });
+
+        if (!isSubscribed) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        localStream = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
-      } catch (err) {
-        console.error("Camera access denied:", err);
+      } catch (err: any) {
+        if (!isSubscribed) return;
+        console.error("Camera access denied or unavailable:", err);
+        setCameraError(
+          "Camera access was denied or is unavailable. Please grant camera permissions in your browser or device settings and try again."
+        );
       }
     }
 
     startCamera();
 
     return () => {
-      stream?.getTracks().forEach((t) => t.stop());
+      isSubscribed = false;
+      if (localStream) {
+        localStream.getTracks().forEach((t) => t.stop());
+      }
+      if (videoRef.current?.srcObject) {
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+        videoRef.current.srcObject = null;
+      }
     };
-  }, [showCamera, facingMode]);
+  }, [showCamera, facingMode, cameraRetryCount]);
 
   // Detection loop
   const detectFrame = useCallback(() => {
@@ -452,8 +494,44 @@ const AIFormChecker = () => {
               )}
 
               {modelError && (
-                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30">
-                  <p className="text-red-400 text-lg font-semibold">{modelError}</p>
+                <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center z-30 p-6 text-center">
+                  <p className="text-red-400 text-lg font-semibold mb-2">Pose Model Unavailable</p>
+                  <p className="text-white/70 text-sm mb-6 max-w-sm">{modelError}</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleBack}
+                      className="px-5 py-2.5 rounded-xl bg-card border border-border text-white text-sm font-semibold"
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      onClick={retryModel}
+                      className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Try Again
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {cameraError && (
+                <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center z-30 p-6 text-center">
+                  <p className="text-destructive text-lg font-semibold mb-2">Camera Unavailable</p>
+                  <p className="text-white/70 text-sm mb-6 max-w-sm">{cameraError}</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleBack}
+                      className="px-5 py-2.5 rounded-xl bg-card border border-border text-white text-sm font-semibold"
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      onClick={retryCamera}
+                      className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Retry Camera
+                    </button>
+                  </div>
                 </div>
               )}
 

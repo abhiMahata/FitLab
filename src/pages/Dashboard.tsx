@@ -11,6 +11,7 @@ import { getProfile, getWaterGoalMl } from "@/lib/userProfile";
 import { generateInsights } from "@/lib/insightEngine";
 import { getSyncStatus } from "@/lib/cloudSync";
 import { getFitLabContext } from "@/lib/fitlabBrain";
+import { getLocalDateString, getDayName } from "@/lib/utils";
 
 const BOTTLE_SIZES = [
   { label: "250 ml", ml: 250 },
@@ -72,7 +73,7 @@ const Dashboard = () => {
   }, []);
 
   // ── Today's day ──
-  const today = DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const today = getDayName();
 
   // ── Roster data ──
   const roster = loadRoster();
@@ -86,7 +87,7 @@ const Dashboard = () => {
   const todayLog = getTodayLog();
 
   // ── Water tracking ──
-  const dateKey = new Date().toISOString().slice(0, 10);
+  const dateKey = getLocalDateString();
   const [waterMl, setWaterMl] = useState<number>(() => {
     const saved = localStorage.getItem(`fitlab-water-${dateKey}`);
     return saved ? Number(saved) : 0;

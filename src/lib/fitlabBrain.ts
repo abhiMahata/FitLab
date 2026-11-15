@@ -13,6 +13,7 @@
 
 import { getTodayLog } from "./exerciseLibrary";
 import { getProfile, calculateTDEE, getWaterGoalMl } from "./userProfile";
+import { getLocalDateString, getLocalDateOffset, getDayName } from "./utils";
 import { loadFormSessions } from "./formSessionUtils";
 
 // ─── Core Types ───────────────────────────────────────────────────────
@@ -90,8 +91,8 @@ function readSleep(): SleepSnapshot {
     if (entries.length === 0) {
       return { hasData: false, score: 75, durationMin: 480, quality: 3, trend: "stable", daysTracked: 0 };
     }
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const today = getLocalDateString();
+    const yesterday = getLocalDateOffset(-1);
     const latest = entries.find(e => e.date === today) || entries.find(e => e.date === yesterday) || entries[0];
 
     // Trend: compare most recent 3 vs previous 3
@@ -120,14 +121,12 @@ function readNutrition(): NutritionSnapshot {
   const profile = getProfile();
   const goal = calculateTDEE(profile);
   const waterGoalMl = getWaterGoalMl(profile);
-  const dateKey = new Date().toISOString().slice(0, 10);
+  const dateKey = getLocalDateString();
   const waterMl = Number(localStorage.getItem(`fitlab-water-${dateKey}`) || "0");
 
   try {
     const raw = localStorage.getItem("fitlab-calorie-data");
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-    const dayKey = days[todayIdx];
+    const dayKey = getDayName();
     let consumed = 0;
     if (raw) {
       const data = JSON.parse(raw);

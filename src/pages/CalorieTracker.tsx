@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
 import { getProfile, calculateTDEE } from "@/lib/userProfile";
 import { getAdvisoriesFor, getFitLabContext } from "@/lib/fitlabBrain";
+import { DAYS_OF_WEEK, getMondayFirstDayIndex } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ const MEALS: { type: MealType; emoji: string; timeHint: string }[] = [
   { type: "Dinner", emoji: "🌙", timeHint: "7 PM – 9 PM" },
 ];
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+const DAYS = DAYS_OF_WEEK;
 const STORAGE_KEY = "fitlab-calorie-data";
 
 // ─── Storage ──────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ function loadData(): WeekData {
 
 function saveData(data: WeekData) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  import("@/lib/cloudSync").then(m => m.syncNow()).catch(() => {});
+  import("@/lib/cloudSync").then(m => m.syncNow()).catch(() => { });
 }
 
 // ─── Arc Gauge Component ──────────────────────────────────────────────
@@ -122,7 +123,7 @@ function CalorieArc({ consumed, goal }: { consumed: number; goal: number }) {
 const CalorieTracker = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const todayIdx = getMondayFirstDayIndex();
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const [weekData, setWeekData] = useState<WeekData>(loadData);
 

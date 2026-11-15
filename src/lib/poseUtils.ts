@@ -80,6 +80,7 @@ export function findAngle(p1: Point, p2: Point, refPt: Point = { x: 0, y: 0 }): 
     const dot = p1Ref.x * p2Ref.x + p1Ref.y * p2Ref.y;
     const mag1 = Math.sqrt(p1Ref.x ** 2 + p1Ref.y ** 2);
     const mag2 = Math.sqrt(p2Ref.x ** 2 + p2Ref.y ** 2);
+    if (mag1 === 0 || mag2 === 0) return 0;
     const cosTheta = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
     return Math.floor((180 / Math.PI) * Math.acos(cosTheta));
 }
@@ -94,7 +95,10 @@ export function getLandmarkCoord(
     width: number,
     height: number
 ): Point {
-    const lm = landmarks[index];
+    const lm = landmarks?.[index];
+    if (!lm) {
+        return { x: 0, y: 0 };
+    }
     return { x: Math.round(lm.x * width), y: Math.round(lm.y * height) };
 }
 

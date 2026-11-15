@@ -8,6 +8,7 @@
 import { getTodayLog, loadWorkoutLogs } from "./exerciseLibrary";
 import { getProfile, calculateTDEE, getWaterGoalMl } from "./userProfile";
 import { loadFormSessions } from "./formSessionUtils";
+import { getLocalDateString, getLocalDateOffset, getDayName } from "./utils";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ export interface Insight {
 // ─── Data readers ─────────────────────────────────────────────────────
 
 function getTodayWaterMl(): number {
-  const dateKey = new Date().toISOString().slice(0, 10);
+  const dateKey = getLocalDateString();
   const saved = localStorage.getItem(`fitlab-water-${dateKey}`);
   return saved ? Number(saved) : 0;
 }
@@ -35,9 +36,7 @@ function getTodayCalories(): { consumed: number; goal: number } {
     const raw = localStorage.getItem("fitlab-calorie-data");
     if (!raw) return { consumed: 0, goal };
     const data = JSON.parse(raw);
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-    const dayKey = days[todayIdx];
+    const dayKey = getDayName();
     const dayData = data[dayKey];
     if (!dayData?.entries) return { consumed: 0, goal };
     const consumed = dayData.entries.reduce((s: number, e: { calories: number }) => s + e.calories, 0);
@@ -59,8 +58,8 @@ function getLastNightSleep(): SleepEntry | null {
     const entries: SleepEntry[] = JSON.parse(localStorage.getItem("fitlab-sleep-entries") || "[]");
     if (entries.length === 0) return null;
     // Get today's or yesterday's entry (most recent)
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const today = getLocalDateString();
+    const yesterday = getLocalDateOffset(-1);
     return entries.find(e => e.date === today) || entries.find(e => e.date === yesterday) || null;
   } catch {
     return null;

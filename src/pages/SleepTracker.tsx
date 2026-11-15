@@ -8,8 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import BottomMenu from "@/components/BottomMenu";
 import AlarmScreen from "@/components/AlarmScreen";
 import { getAdvisoriesFor, getFitLabContext } from "@/lib/fitlabBrain";
+import { getLocalDateString, getLocalDateOffset } from "@/lib/utils";
 
-// I am Fucking Gay. Such a goddamn fucking gay
 interface SleepEntry {
   id: string;
   date: string;        // YYYY-MM-DD
@@ -22,7 +22,7 @@ interface SleepEntry {
 }
 
 type TrackerView = "home" | "sleeping" | "rating";
-//Do i even need to show an emoji? what the fuck am I , Claudio?
+
 const MOODS = [
   { emoji: "😫", label: "Awful" },
   { emoji: "😴", label: "Tired" },
@@ -42,7 +42,6 @@ const SLEEP_TIPS = [
   "Exposure to morning sunlight helps reset your circadian rhythm.",
 ];
 
-// Helper division bcos idgaf what the fuck is even going on . Fuck you.
 const STORAGE_KEY = "fitlab-sleep-entries";
 
 function loadEntries(): SleepEntry[] {
@@ -188,7 +187,7 @@ const SleepTracker = () => {
     const durationMin = (wakeTimestamp - bedtime) / 60000;
     const quality = ratingQuality;
     const score = calcScore(durationMin, quality);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateString();
 
     const entry: SleepEntry = {
       id: `${Date.now()}`,
@@ -221,16 +220,14 @@ const SleepTracker = () => {
 
   // ── Computed data ──
   const todayEntry = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateString();
     return entries.find((e) => e.date === today) || null;
   }, [entries]);
 
   const weekEntries = useMemo(() => {
     const last7: (SleepEntry | null)[] = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = getLocalDateOffset(-i);
       last7.push(entries.find((e) => e.date === key) || null);
     }
     return last7;

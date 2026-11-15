@@ -3,6 +3,8 @@
  * Saves AI Form Checker session results for tracking improvement over time.
  */
 
+import { getLocalDateString } from "./utils";
+
 export interface FormSession {
   id: string;
   date: string;           // YYYY-MM-DD
@@ -27,7 +29,7 @@ export function saveFormSession(session: Omit<FormSession, "id" | "date" | "time
   const full: FormSession = {
     ...session,
     id: `${Date.now()}`,
-    date: new Date().toISOString().slice(0, 10),
+    date: getLocalDateString(),
     timestamp: Date.now(),
   };
   const sessions = loadFormSessions();

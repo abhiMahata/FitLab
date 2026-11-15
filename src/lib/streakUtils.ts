@@ -1,3 +1,5 @@
+import { getLocalDateString, getLocalDateOffset, getDayNameFromDateKey } from "./utils";
+
 interface StreakData {
   currentStreak: number;
   longestStreak: number;
@@ -9,13 +11,11 @@ const STREAK_KEY = "fitlab-streak-data";
 const WATER_GOAL = 3000; // ml — matches Dashboard
 
 function getToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  return getLocalDateString();
 }
 
 function getYesterday(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  return getLocalDateOffset(-1);
 }
 
 
@@ -29,10 +29,7 @@ function hasCalorieActivity(dateKey: string): boolean {
     const raw = localStorage.getItem("fitlab-calorie-data");
     if (!raw) return false;
     const data = JSON.parse(raw);
-    // Convert date to day name
-    const d = new Date(dateKey + "T12:00:00");
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const dayName = days[d.getDay()];
+    const dayName = getDayNameFromDateKey(dateKey);
     return data[dayName]?.entries?.length > 0;
   } catch {
     return false;

@@ -30,7 +30,7 @@ export function saveProfile(profile: UserProfile) {
 
 // Mifflin-St Jeor Equation
 export function calculateBMR(profile: UserProfile | null): number {
-  if (!profile) return 1800; // default
+  if (!profile || !profile.weightKg || !profile.heightCm || !profile.age) return 1800; // default
   let bmr = 10 * profile.weightKg + 6.25 * profile.heightCm - 5 * profile.age;
   if (profile.gender === "Male") {
     bmr += 5;
@@ -60,7 +60,7 @@ export function calculateTDEE(profile: UserProfile | null): number {
 }
 
 export function calculateBMI(profile: UserProfile | null): number {
-  if (!profile) return 22.0; // default
+  if (!profile || !profile.heightCm || profile.heightCm <= 0 || !profile.weightKg || profile.weightKg <= 0) return 22.0; // default
   const heightM = profile.heightCm / 100;
   return Number((profile.weightKg / (heightM * heightM)).toFixed(1));
 }

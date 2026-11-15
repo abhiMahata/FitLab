@@ -4,6 +4,8 @@
  * All data sourced from localStorage, no backend needed.
  */
 
+import { getLocalDateString } from "@/lib/utils";
+
 export interface Badge {
   id: string;
   name: string;
@@ -54,7 +56,7 @@ const BADGE_DEFS: BadgeDef[] = [
     emoji: "💧",
     description: "Hit your water goal (3L) in a single day",
     check: () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getLocalDateString();
       const saved = localStorage.getItem(`fitlab-water-${today}`);
       return saved ? Number(saved) >= 3000 : false;
     },
